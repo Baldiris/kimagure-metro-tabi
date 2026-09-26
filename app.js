@@ -225,8 +225,9 @@
     if (state === "HOME") return {
       body: `<div class="fade-in"><span class="eyebrow">TOKYO METRO / ALL LINES</span><h2 class="screen-title">次の駅は、<br>サイコロ次第。</h2>
         <p class="muted">東京メトロ全9路線から、今日の旅を選ぼう。出発駅とゴールは運次第。</p>
-        <div class="hero-slot"><div class="slot-signal"><span>DEPARTURE BOARD</span><span class="signal-led"></span></div>
-          <div class="slot-window" aria-hidden="true">渋谷　→　？</div></div>
+        <div class="hero-slot"><img class="hero-photo" src="./metro-hero.webp" alt="地下鉄ホームに入る列車のイメージ" width="1536" height="1024">
+          <div class="hero-slot-overlay"><div class="slot-signal"><span>YOUR NEXT STOP / TOKYO</span><span class="signal-led"></span></div>
+          <div class="slot-window" aria-hidden="true"><span>？</span><span class="slot-arrow">→</span><span>？</span></div></div></div>
         <div class="feature-steps"><div><b>01</b>駅を抽選</div><div><b>02</b>サイコロで進む</div><div><b>03</b>街を発見</div></div>
         ${restoreError ? '<p class="error">保存された旅を読み込めませんでした。新しい旅を始められます。</p>' : ""}</div>`,
       action: '<button class="primary" data-action="start">新しい旅をはじめる　→</button>'
