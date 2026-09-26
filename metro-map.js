@@ -102,7 +102,7 @@
       return `<g class="network-marker ${kind}" transform="translate(${x} ${y})"><circle class="marker-halo" r="17"/><circle class="marker-core" r="8"/><title>${kind === "now" ? "現在地" : "ゴール"}：${esc(active.stations[index].name)}駅</title></g>`;
     };
     const viewBox = preview ? "255 185 1140 745" : "0 0 1600 1080";
-    return `<svg class="network-svg${preview ? " is-preview" : ""}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="東京メトロ全9路線の独自模式図。各路線の駅順と主な接続駅を示します"><title>きまぐれメトロ旅 路線図</title><defs><pattern id="map-grid${preview ? "-preview" : ""}" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#dbe5e1" stroke-width=".8"/></pattern></defs><rect width="1600" height="1080" fill="#f7f8f3"/><rect width="1600" height="1080" fill="url(#map-grid${preview ? "-preview" : ""})"/>${routePaths}${dots}${labels}${marker(goalStationId,"goal")}${marker(currentStationId,"now")}</svg>`;
+    return `<svg class="network-svg${preview ? " is-preview" : ""}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="東京メトロ全9路線の独自模式図。各路線の駅順と主な接続駅を示します"><title>きまぐれメトロ旅 路線図</title><defs><pattern id="map-grid${preview ? "-preview" : ""}" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#dbe5e1" stroke-width=".8"/></pattern></defs><rect width="1600" height="1080" fill="#f7f8f3"/><rect width="1600" height="1080" fill="url(#map-grid${preview ? "-preview" : ""})"/>${routePaths}${dots}${labels}${marker(goalStationId,"goal")}${currentStationId === goalStationId ? "" : marker(currentStationId,"now")}</svg>`;
   }
   function lineDiagram(line, game) {
     const stops = line.stations, step = 96, width = (stops.length - 1) * step + 90;
@@ -111,7 +111,7 @@
     const start = stops.findIndex(s => s.id === game.startStationId);
     const progress = at >= 0 && start >= 0 ? `<path d="M${45+start*step} 43H${45+at*step}" stroke="#10252b" stroke-width="7" fill="none"/>` : "";
     const nodes = stops.map((s,i) => {
-      const x=45+i*step, special=i===at?" now":i===goal?" goal":"";
+      const x=45+i*step, special=`${i===at ? " now" : ""}${i===goal ? " goal" : ""}`;
       return `<g class="line-svg-node${special}"><title>${esc(s.name)}駅 ${esc(s.id)}</title><circle cx="${x}" cy="43" r="${special ? 11 : 7}"/><text class="line-code" x="${x}" y="18" text-anchor="middle">${esc(s.id)}</text><text x="${x}" y="78" text-anchor="middle">${esc(s.name.replace(/〈.*〉/, ""))}</text></g>`;
     }).join("");
     return `<svg class="line-svg" viewBox="0 0 ${width} 100" width="${width}" height="100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(line.name)}の全${stops.length}駅。現在駅とゴールを表示"><path d="M45 43H${45+(stops.length-1)*step}" stroke="${line.color}" stroke-width="7" fill="none" stroke-linecap="round"/>${progress}${nodes}</svg>`;
