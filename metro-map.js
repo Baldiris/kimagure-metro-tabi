@@ -101,8 +101,13 @@
       const [x,y] = routes.get(active.id)[index];
       return `<g class="network-marker ${kind}" transform="translate(${x} ${y})"><circle class="marker-halo" r="17"/><circle class="marker-core" r="8"/><title>${kind === "now" ? "現在地" : "ゴール"}：${esc(active.stations[index].name)}駅</title></g>`;
     };
-    const viewBox = preview ? "255 185 1140 745" : "0 0 1600 1080";
-    return `<svg class="network-svg${preview ? " is-preview" : ""}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="東京メトロ全9路線の独自模式図。各路線の駅順と主な接続駅を示します"><title>きまぐれメトロ旅 路線図</title><defs><pattern id="map-grid${preview ? "-preview" : ""}" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#dbe5e1" stroke-width=".8"/></pattern></defs><rect width="1600" height="1080" fill="#f7f8f3"/><rect width="1600" height="1080" fill="url(#map-grid${preview ? "-preview" : ""})"/>${routePaths}${dots}${labels}${marker(goalStationId,"goal")}${currentStationId === goalStationId ? "" : marker(currentStationId,"now")}</svg>`;
+    const viewBox = preview ? "255 185 1140 745" : "0 0 1600 1260";
+    const legend = preview ? "" : `<g class="network-legend"><path d="M60 1080H1540" stroke="#d5e0db" stroke-width="2"/><text x="65" y="1108" class="legend-heading">TOKYO METRO / 9 LINES + BRANCH</text>${lines.map((line,i) => {
+      const x=65+(i%5)*306, y=1150+Math.floor(i/5)*47;
+      const code=line.id === "Mb" ? "m" : line.id;
+      return `<g transform="translate(${x} ${y})"><circle r="17" fill="${line.color}"/><text text-anchor="middle" y="6" class="legend-code">${code}</text><text x="28" y="7" class="legend-name">${esc(line.name.replace("（分岐線）", "（方南町支線）"))}</text></g>`;
+    }).join("")}<text x="1535" y="1241" text-anchor="end" class="legend-note">独自の模式図 · 地理上の位置や所要時間は示しません</text></g>`;
+    return `<svg class="network-svg${preview ? " is-preview" : ""}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="東京メトロ全9路線の独自模式図。各路線の駅順と主な接続駅を示します"><title>きまぐれメトロ旅 路線図</title><defs><pattern id="map-grid${preview ? "-preview" : ""}" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#dbe5e1" stroke-width=".8"/></pattern></defs><rect width="1600" height="1260" fill="#f7f8f3"/><rect width="1600" height="1260" fill="url(#map-grid${preview ? "-preview" : ""})"/>${routePaths}${dots}${labels}${marker(goalStationId,"goal")}${currentStationId === goalStationId ? "" : marker(currentStationId,"now")}${legend}</svg>`;
   }
   function lineDiagram(line, game) {
     const stops = line.stations, step = 96, width = (stops.length - 1) * step + 90;

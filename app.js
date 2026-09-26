@@ -189,7 +189,7 @@
         <button class="map-chip ${!focus ? "active" : ""}" data-action="map-line" data-line="all" aria-pressed="${!focus}">全路線</button>
         ${lines.map(item => `<button class="map-chip ${mapFocusId === item.id ? "active" : ""}" data-action="map-line" data-line="${item.id}" aria-pressed="${mapFocusId === item.id}" style="--chip-color:${item.color}"><span>${code(item)}</span>${item.name.replace("（分岐線）", "支線")}</button>`).join("")}</div>
       <div class="network-viewport" aria-label="スクロールできる全路線図">${metroMap.overview({activeLineId:focus?.id,currentStationId:game && focus && game.lineId === focus.id ? game.currentStationId : null,goalStationId:game && focus && game.lineId === focus.id ? game.goalStationId : null})}</div>
-      <p class="map-disclaimer">独自の模式図です。地理上の位置・距離・所要時間を示すものではありません。</p>
+      <p class="map-disclaimer">独自の模式図です。地理上の位置・距離・所要時間を示すものではありません。<a href="./metro-network.svg" target="_blank" rel="noopener noreferrer">SVGを大きく開く ↗</a></p>
       ${focus ? `<section class="map-line-detail"><div class="line-key"><span class="line-pill" style="background:${focus.color}">${code(focus)}</span><h3>${focus.name.replace("（分岐線）", "（方南町支線）")}</h3></div>
         <p>${focus.stations[0].name} → ${focus.stations.at(-1).name} · ${focus.stations.length}駅</p>
         <div class="map-stop-list">${focus.stations.map(s => `<span><small>${s.id}</small>${s.name}</span>`).join("")}</div></section>` : ""}</div>`;
@@ -326,7 +326,7 @@
       const at = focusLine && game?.lineId === focusLine.id ? focusLine.stations.findIndex(s => s.id === game?.currentStationId) : -1;
       const point = focusLine ? metroMap.routes.get(focusLine.id)[at >= 0 ? at : Math.floor(focusLine.stations.length / 2)] : metroMap.anchors["大手町"];
       viewport.scrollLeft = point[0] / 1600 * viewport.scrollWidth - viewport.clientWidth / 2;
-      viewport.scrollTop = point[1] / 1080 * viewport.scrollHeight - viewport.clientHeight / 2;
+      viewport.scrollTop = point[1] / 1260 * viewport.scrollHeight - viewport.clientHeight / 2;
     }
   }
   app.addEventListener("click", e => {

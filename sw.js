@@ -1,5 +1,5 @@
-const CACHE = "kimagure-metro-v5";
-const CORE = ["./", "./index.html", "./styles.css", "./data.js", "./metro-map.js", "./app.js"];
+const CACHE = "kimagure-metro-v6";
+const CORE = ["./", "./index.html", "./styles.css", "./data.js", "./metro-map.js", "./metro-network.svg", "./app.js"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
 });
