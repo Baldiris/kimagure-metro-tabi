@@ -1,5 +1,5 @@
-const CACHE = "kimagure-metro-v9";
-const CORE = ["./", "./index.html", "./styles.css", "./data.js", "./metro-map.js", "./metro-network.svg", "./app.js"];
+const CACHE = "kimagure-metro-v10";
+const CORE = ["./", "./index.html", "./styles.css?v=20260926c", "./data.js?v=20260926c", "./metro-map.js?v=20260926c", "./metro-network.svg", "./app.js?v=20260926c"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
 });
@@ -10,7 +10,7 @@ self.addEventListener("activate", event => {
 });
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET" || new URL(event.request.url).origin !== self.location.origin) return;
-  event.respondWith(fetch(event.request).then(response => {
+  event.respondWith(fetch(event.request, {cache:"no-cache"}).then(response => {
     if (response.ok) event.waitUntil(caches.open(CACHE).then(cache => cache.put(event.request, response.clone())));
     return response;
   }).catch(() => caches.match(event.request).then(cached => cached || caches.match("./index.html"))));
