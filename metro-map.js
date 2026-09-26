@@ -54,6 +54,12 @@
     ["押上〈スカイツリー前〉", -6, 37, "end"],
     ["西船橋", -8, -22, "end"], ["新木場", -10, 33, "end"]
   ];
+  const walkingTransfers = [
+    ["溜池山王", "国会議事堂前"], ["赤坂見附", "永田町"],
+    ["日比谷", "有楽町"], ["銀座", "銀座一丁目"],
+    ["築地", "新富町"], ["上野広小路", "仲御徒町"],
+    ["淡路町", "新御茶ノ水"], ["虎ノ門", "虎ノ門ヒルズ"]
+  ];
   const esc = value => String(value).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[ch]);
   const fmt = number => Math.round(number * 10) / 10;
   const routes = new Map();
@@ -76,6 +82,10 @@
     });
   }
   function overview({activeLineId = null, currentStationId = null, goalStationId = null, preview = false} = {}) {
+    const walks = walkingTransfers.map(([from,to]) => {
+      const a=stationsByName.get(from)?.point,b=stationsByName.get(to)?.point;
+      return a && b ? `<path class="transfer-walk" d="M${a[0]} ${a[1]}L${b[0]} ${b[1]}"><title>徒歩連絡：${esc(from)}駅 — ${esc(to)}駅</title></path>` : "";
+    }).join("");
     const sorted = [...lines].sort((a,b) => (a.id === activeLineId ? 1 : 0) - (b.id === activeLineId ? 1 : 0));
     const routePaths = sorted.map(line => {
       const points = routes.get(line.id), d = points.map(([x,y],i) => `${i ? "L" : "M"}${x} ${y}`).join(" ");
@@ -106,8 +116,8 @@
       const x=65+(i%5)*306, y=1150+Math.floor(i/5)*47;
       const code=line.id === "Mb" ? "m" : line.id;
       return `<g transform="translate(${x} ${y})"><circle r="17" fill="${line.color}"/><text text-anchor="middle" y="6" class="legend-code">${code}</text><text x="28" y="7" class="legend-name">${esc(line.name.replace("（分岐線）", "（方南町支線）"))}</text></g>`;
-    }).join("")}<text x="1535" y="1241" text-anchor="end" class="legend-note">独自の模式図 · 地理上の位置や所要時間は示しません</text></g>`;
-    return `<svg class="network-svg${preview ? " is-preview" : ""}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="東京メトロ全9路線の独自模式図。各路線の駅順と主な接続駅を示します"><title>きまぐれメトロ旅 路線図</title><defs><pattern id="map-grid${preview ? "-preview" : ""}" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#dbe5e1" stroke-width=".8"/></pattern></defs><rect width="1600" height="1260" fill="#f7f8f3"/><rect width="1600" height="1260" fill="url(#map-grid${preview ? "-preview" : ""})"/>${routePaths}${dots}${labels}${marker(goalStationId,"goal")}${currentStationId === goalStationId ? "" : marker(currentStationId,"now")}${legend}</svg>`;
+    }).join("")}<text x="1535" y="1241" text-anchor="end" class="legend-note">点線は徒歩連絡 · 地理上の位置や所要時間は示しません</text></g>`;
+    return `<svg class="network-svg${preview ? " is-preview" : ""}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="東京メトロ全9路線の独自模式図。各路線の駅順と主な接続駅を示します"><title>きまぐれメトロ旅 路線図</title><defs><pattern id="map-grid${preview ? "-preview" : ""}" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#dbe5e1" stroke-width=".8"/></pattern></defs><rect width="1600" height="1260" fill="#f7f8f3"/><rect width="1600" height="1260" fill="url(#map-grid${preview ? "-preview" : ""})"/>${walks}${routePaths}${dots}${labels}${marker(goalStationId,"goal")}${currentStationId === goalStationId ? "" : marker(currentStationId,"now")}${legend}</svg>`;
   }
   function lineDiagram(line, game) {
     const stops = line.stations, step = 96, width = (stops.length - 1) * step + 90;

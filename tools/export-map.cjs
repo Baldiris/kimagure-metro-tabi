@@ -14,6 +14,7 @@ const style = `<style>
 .route-casing{stroke:#f7f8f3;stroke-width:15}
 .route-color{stroke-width:8;fill:none}
 .network-station circle{fill:#fff;stroke:#34534e;stroke-width:2}
+.transfer-walk{fill:none;stroke:#7b918c;stroke-width:5;stroke-dasharray:5 7;stroke-linecap:round;opacity:.65}
 .network-label{font:700 19px sans-serif;fill:#193c37;paint-order:stroke;stroke:#f7f8f3;stroke-width:5;stroke-linejoin:round}
 .network-legend .legend-heading{font:700 16px monospace;letter-spacing:2px;fill:#6c8580}
 .network-legend .legend-code{font:700 18px monospace;fill:#fff}
