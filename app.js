@@ -30,6 +30,11 @@
   let game = null;
   let view = "game";
   let mapFocusId = null;
+  let mapSelectedName = null;
+  let mapFrom = null;
+  let mapTo = null;
+  let mapZoom = 1;
+  let mapSearchQuery = "";
   let busy = false;
   let lotteryPreview = null;
   let displayStation = null;
@@ -174,6 +179,35 @@
     const length = Math.abs(byId(game.goalStationId) - byId(game.startStationId));
     return Math.round((1 - remaining() / length) * 100);
   };
+  const escapeHtml = value => String(value).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[ch]);
+  function searchResults() {
+    const query = mapSearchQuery.trim().toLocaleLowerCase();
+    if (!query) return '<p class="map-search-hint">駅名や駅番号で検索。路線図の駅もタップできます。</p>';
+    const results = [...metroMap.stations.values()].filter(s =>
+      s.name.toLocaleLowerCase().includes(query) || s.lines.some(id =>
+        lines.find(l => l.id === id).stations.some(stop => stop.name === s.name && stop.id.toLocaleLowerCase().includes(query))));
+    if (!results.length) return '<p class="map-search-hint">該当する駅がありません。</p>';
+    return `<div class="map-search-list">${results.slice(0,12).map(s => `<button data-action="map-station" data-station="${escapeHtml(s.name)}"><strong>${escapeHtml(s.name)}</strong><span>${s.lines.map(id => id === "Mb" ? "m" : id).join(" · ")}</span></button>`).join("")}</div>${results.length > 12 ? `<p class="map-search-hint">${results.length}件中12件を表示。名前を詳しく入力してください。</p>` : ""}`;
+  }
+  function stationDetail(name) {
+    const found = metroMap.stations.get(name);
+    if (!found) return "";
+    const codes = found.lines.map(id => {
+      const route = lines.find(item => item.id === id), stop = route.stations.find(s => s.name === name);
+      return `<span class="station-line" style="--chip-color:${route.color}"><b>${escapeHtml(stop.id)}</b>${escapeHtml(route.name.replace("（分岐線）", "支線"))}</span>`;
+    }).join("");
+    return `<section class="station-detail" aria-label="選択した駅"><div class="station-detail-head"><div><span class="mini-label">SELECTED STATION</span><h3>${escapeHtml(name)}<small>駅</small></h3></div><span class="station-count">${found.lines.length}路線</span></div>
+      <div class="station-lines">${codes}</div><div class="station-actions"><button data-action="map-from" data-station="${escapeHtml(name)}" aria-pressed="${mapFrom === name}">ここから出発</button><button data-action="map-to" data-station="${escapeHtml(name)}" aria-pressed="${mapTo === name}">ここに到着</button></div></section>`;
+  }
+  function routeDetail(journey) {
+    if (!mapFrom && !mapTo) return '<p class="map-route-prompt">駅を2つ選ぶと、路線図上にルートを表示します。</p>';
+    if (!journey) return `<div class="route-builder"><div><small>出発</small><strong>${escapeHtml(mapFrom || "駅を選択")}</strong></div><span>→</span><div><small>到着</small><strong>${escapeHtml(mapTo || "駅を選択")}</strong></div></div>${mapFrom === mapTo && mapFrom ? '<p class="map-search-hint">出発駅と異なる到着駅を選んでください。</p>' : ""}`;
+    const names = Object.fromEntries(lines.map(l => [l.id,l.name.replace("（分岐線）", "支線")]));
+    return `<div class="route-builder"><div><small>出発</small><strong>${escapeHtml(mapFrom)}</strong></div><span>→</span><div><small>到着</small><strong>${escapeHtml(mapTo)}</strong></div></div>
+      <div class="route-metrics"><span><b>${journey.hops}</b>駅</span><span><b>${journey.transfers}</b>回乗換</span></div>
+      <ol class="route-steps">${journey.segments.map((segment,i) => `<li style="--step-color:${lines.find(l => l.id === segment.lineId).color}"><span class="step-code">${segment.lineId === "Mb" ? "m" : segment.lineId}</span><div><b>${escapeHtml(names[segment.lineId])}</b><small>${escapeHtml(segment.from)} → ${escapeHtml(segment.to)} · ${segment.hops}駅</small></div></li>`).join("")}</ol>
+      <p class="map-search-hint">駅数が少ない経路を表示。実際の乗換動線・所要時間・運賃は含みません。</p>`;
+  }
   function miniMap() {
     if (!game?.goalStationId) return "";
     return `<section class="map-card"><div class="map-head"><b>${lineName()}の旅路</b><span class="mini-label">${line.id} · ${stations.length}駅</span></div>
@@ -182,17 +216,22 @@
   function mapScreen() {
     const focus = lines.find(item => item.id === mapFocusId);
     const code = item => item.id === "Mb" ? "m" : item.id;
+    const journey = mapFrom && mapTo ? metroMap.findRoute(mapFrom,mapTo) : null;
     return `<div class="fade-in"><span class="eyebrow">TOKYO METRO / SCHEMATIC</span>
-      <h2 class="screen-title">路線図から、旅を見る。</h2>
-      <p class="muted">全9路線と方南町支線の駅順・接続駅を描いた模式図です。路線を選ぶと強調表示します。</p>
+      <h2 class="screen-title">駅から、旅を組み立てる。</h2>
+      <p class="muted">駅を探して、出発駅と到着駅を選択。全9路線と方南町支線をまたぐルートを模式図で確かめられます。</p>
+      <div class="map-search"><label for="map-search-input">駅を探す</label><div class="map-search-box"><span aria-hidden="true">⌕</span><input id="map-search-input" type="search" autocomplete="off" placeholder="例：渋谷、M06、北千住" value="${escapeHtml(mapSearchQuery)}" aria-controls="map-search-results"></div><div id="map-search-results" aria-live="polite">${searchResults()}</div></div>
+      ${stationDetail(mapSelectedName)}
+      <section class="route-panel" aria-label="ルートプレビュー"><div class="route-panel-head"><div><span class="mini-label">ROUTE PREVIEW</span><h3>2駅間のルート</h3></div><div class="route-panel-actions"><button data-action="map-swap" ${!mapFrom || !mapTo ? "disabled" : ""} aria-label="出発駅と到着駅を入れ替える">入替</button><button data-action="map-clear" ${!mapFrom && !mapTo ? "disabled" : ""}>解除</button></div></div>${routeDetail(journey)}</section>
       <div class="map-filters" aria-label="表示する路線">
         <button class="map-chip ${!focus ? "active" : ""}" data-action="map-line" data-line="all" aria-pressed="${!focus}">全路線</button>
         ${lines.map(item => `<button class="map-chip ${mapFocusId === item.id ? "active" : ""}" data-action="map-line" data-line="${item.id}" aria-pressed="${mapFocusId === item.id}" style="--chip-color:${item.color}"><span>${code(item)}</span>${item.name.replace("（分岐線）", "支線")}</button>`).join("")}</div>
-      <div class="network-viewport" aria-label="スクロールできる全路線図">${metroMap.overview({activeLineId:focus?.id,currentStationId:game && focus && game.lineId === focus.id ? game.currentStationId : null,goalStationId:game && focus && game.lineId === focus.id ? game.goalStationId : null})}</div>
+      <div class="map-controls"><span>ドラッグで移動 · 駅をタップ</span><div><button data-action="map-zoom-out" aria-label="路線図を縮小" ${mapZoom <= .7 ? "disabled" : ""}>−</button><span aria-live="polite">${Math.round(mapZoom*100)}%</span><button data-action="map-zoom-in" aria-label="路線図を拡大" ${mapZoom >= 1.6 ? "disabled" : ""}>＋</button></div></div>
+      <div class="network-viewport" aria-label="スクロールできる全路線図"><div class="map-canvas" style="width:${Math.round(1200*mapZoom)}px">${metroMap.overview({activeLineId:focus?.id,currentStationId:game && focus && game.lineId === focus.id ? game.currentStationId : null,goalStationId:game && focus && game.lineId === focus.id ? game.goalStationId : null,selectedStationName:mapSelectedName,journey})}</div></div>
       <p class="map-disclaimer">独自の模式図です。地理上の位置・距離・所要時間を示すものではありません。<a href="./metro-network.svg" target="_blank" rel="noopener noreferrer">SVGを大きく開く ↗</a></p>
       ${focus ? `<section class="map-line-detail"><div class="line-key"><span class="line-pill" style="background:${focus.color}">${code(focus)}</span><h3>${focus.name.replace("（分岐線）", "（方南町支線）")}</h3></div>
         <p>${focus.stations[0].name} → ${focus.stations.at(-1).name} · ${focus.stations.length}駅</p>
-        <div class="map-stop-list">${focus.stations.map(s => `<span><small>${s.id}</small>${s.name}</span>`).join("")}</div></section>` : ""}</div>`;
+        <div class="map-stop-list">${focus.stations.map(s => `<button data-action="map-station" data-station="${escapeHtml(s.name)}"><small>${s.id}</small>${escapeHtml(s.name)}</button>`).join("")}</div></section>` : ""}</div>`;
   }
   function questList() {
     const visit = game.visitHistory.at(-1);
@@ -302,6 +341,7 @@
       action: '<button class="primary" data-action="clear">新しい旅をはじめる</button>' };
   }
   function render() {
+    const oldScroll = view === "map" && app.querySelector(".network-viewport") ? app.querySelector("#screen")?.scrollTop : 0;
     const s = screen();
     const canHistory = game?.startStationId && game.visitHistory.length > 0;
     app.innerHTML = `<main class="shell">
@@ -320,11 +360,12 @@
         <p class="side-hint">● 現在地　● ゴール<br>途中でページを閉じても、次回続きから再開できます。</p></aside>
     </main>`;
     app.querySelector(".shell").style.setProperty("--line-color", line.color);
+    if (oldScroll) app.querySelector("#screen").scrollTop = oldScroll;
     const viewport = app.querySelector(".network-viewport");
     if (viewport && Number.isFinite(viewport.scrollWidth)) {
       const focusLine = lines.find(item => item.id === mapFocusId);
       const at = focusLine && game?.lineId === focusLine.id ? focusLine.stations.findIndex(s => s.id === game?.currentStationId) : -1;
-      const point = focusLine ? metroMap.routes.get(focusLine.id)[at >= 0 ? at : Math.floor(focusLine.stations.length / 2)] : metroMap.anchors["大手町"];
+      const point = metroMap.stations.get(mapSelectedName)?.point || (focusLine ? metroMap.routes.get(focusLine.id)[at >= 0 ? at : Math.floor(focusLine.stations.length / 2)] : metroMap.anchors["大手町"]);
       viewport.scrollLeft = point[0] / 1600 * viewport.scrollWidth - viewport.clientWidth / 2;
       viewport.scrollTop = point[1] / 1260 * viewport.scrollHeight - viewport.clientHeight / 2;
     }
@@ -346,12 +387,30 @@
     if (action === "arrive") arrive();
     if (action === "quest") toggleQuest(button.dataset.id);
     if (action === "next" && game?.gameState === "ARRIVED") save({ gameState: "READY_TO_ROLL" });
-    if (action === "map") { mapFocusId = game?.lineId || null; view = "map"; render(); }
+    if (action === "map") { mapFocusId = game?.lineId || null; mapFrom = game?.currentStationId ? station(game.currentStationId)?.name : null; mapTo = game?.goalStationId ? station(game.goalStationId)?.name : null; view = "map"; render(); }
     if (action === "map-line" && view === "map") { mapFocusId = button.dataset.line === "all" ? null : button.dataset.line; render(); }
+    if (action === "map-station" && view === "map" && metroMap.stations.has(button.dataset.station)) { mapSelectedName = button.dataset.station; mapSearchQuery = ""; render(); }
+    if (action === "map-from" && view === "map") { mapFrom = button.dataset.station; render(); }
+    if (action === "map-to" && view === "map") { mapTo = button.dataset.station; render(); }
+    if (action === "map-swap" && view === "map" && mapFrom && mapTo) { [mapFrom,mapTo] = [mapTo,mapFrom]; render(); }
+    if (action === "map-clear" && view === "map") { mapFrom = mapTo = null; render(); }
+    if (action === "map-zoom-in" && view === "map") { mapZoom = Math.min(1.6,Math.round((mapZoom+.3)*10)/10); render(); }
+    if (action === "map-zoom-out" && view === "map") { mapZoom = Math.max(.7,Math.round((mapZoom-.3)*10)/10); render(); }
     if (action === "history" && game) { view = "history"; render(); }
     if (action === "back") { view = "game"; render(); }
     if (["select-line","choose-start","choose-goal","roll","arrive","next","history","back","map"].includes(action))
       app.querySelector("#screen")?.scrollTo(0, 0);
+  });
+  app.addEventListener("input", e => {
+    if (view !== "map" || e.target.id !== "map-search-input") return;
+    mapSearchQuery = e.target.value;
+    const results = app.querySelector("#map-search-results");
+    if (results) results.innerHTML = searchResults();
+  });
+  app.addEventListener("keydown", e => {
+    if (view === "map" && e.target.matches?.(".network-station") && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault(); mapSelectedName = e.target.dataset.station; render();
+    }
   });
   function saveNew() { start(); }
   render();

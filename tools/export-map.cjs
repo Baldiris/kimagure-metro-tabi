@@ -21,7 +21,7 @@ const style = `<style>
 .network-legend .legend-name{font:700 17px sans-serif;fill:#23413c}
 .network-legend .legend-note{font:500 15px sans-serif;fill:#728984}
 </style>`;
-const svg = context.window.METRO_MAP.overview().replace(
+const svg = context.window.METRO_MAP.overview({staticAsset:true}).replace(
   "<title>きまぐれメトロ旅 路線図</title>",
   "<title>きまぐれメトロ旅 路線図</title><desc>東京メトロ9路線と丸ノ内線方南町支線の駅順・主要駅の接続を描いた独自の模式図。地理上の位置や距離は示しません。</desc>" + style
 );

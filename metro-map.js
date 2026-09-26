@@ -81,7 +81,57 @@
       stationsByName.get(s.name).lines.push(line.id);
     });
   }
-  function overview({activeLineId = null, currentStationId = null, goalStationId = null, preview = false} = {}) {
+  // A route is a schematic comparison of station hops, not a timetable or fare search.
+  // Among routes with the fewest hops, prefer fewer changes of line.
+  function findRoute(from, to) {
+    if (!stationsByName.has(from) || !stationsByName.has(to) || from === to) return null;
+    const key = (lineId, index) => lineId + ":" + index;
+    const best = new Map(), previous = new Map(), queue = [];
+    for (const lineId of stationsByName.get(from).lines) {
+      const index = lines.find(l => l.id === lineId).stations.findIndex(s => s.name === from);
+      const node = key(lineId,index);
+      best.set(node,[0,0]); queue.push({lineId,index,hops:0,transfers:0});
+    }
+    let end = null;
+    while (queue.length) {
+      queue.sort((a,b) => a.hops-b.hops || a.transfers-b.transfers);
+      const current = queue.shift(), node = key(current.lineId,current.index);
+      const score = best.get(node);
+      if (score[0] !== current.hops || score[1] !== current.transfers) continue;
+      const line = lines.find(l => l.id === current.lineId), name = line.stations[current.index].name;
+      if (name === to) { end = node; break; }
+      const neighbours = [];
+      for (const index of [current.index-1,current.index+1])
+        if (index >= 0 && index < line.stations.length) neighbours.push({lineId:line.id,index,hops:current.hops+1,transfers:current.transfers});
+      for (const lineId of stationsByName.get(name).lines) {
+        if (lineId === line.id) continue;
+        const index = lines.find(l => l.id === lineId).stations.findIndex(s => s.name === name);
+        neighbours.push({lineId,index,hops:current.hops,transfers:current.transfers+1});
+      }
+      for (const next of neighbours) {
+        const target = key(next.lineId,next.index), old = best.get(target);
+        if (old && (old[0] < next.hops || old[0] === next.hops && old[1] <= next.transfers)) continue;
+        best.set(target,[next.hops,next.transfers]); previous.set(target,node); queue.push(next);
+      }
+    }
+    if (!end) return null;
+    const path = [];
+    for (let node = end; node; node = previous.get(node)) {
+      const [lineId,index] = node.split(":");
+      path.push({lineId,index:Number(index),name:lines.find(l => l.id === lineId).stations[Number(index)].name,point:routes.get(lineId)[Number(index)]});
+    }
+    path.reverse();
+    const segments = [];
+    for (let i=1;i<path.length;i++) {
+      const a=path[i-1], b=path[i];
+      if (a.lineId !== b.lineId) continue;
+      const segment=segments.at(-1);
+      if (segment?.lineId === a.lineId && segment.to === a.name) { segment.to=b.name; segment.points.push(b.point); segment.hops++; }
+      else segments.push({lineId:a.lineId,from:a.name,to:b.name,hops:1,points:[a.point,b.point]});
+    }
+    return {from,to,hops:best.get(end)[0],transfers:best.get(end)[1],segments,path};
+  }
+  function overview({activeLineId = null, currentStationId = null, goalStationId = null, selectedStationName = null, journey = null, preview = false, staticAsset = false} = {}) {
     const walks = walkingTransfers.map(([from,to]) => {
       const a=stationsByName.get(from)?.point,b=stationsByName.get(to)?.point;
       return a && b ? `<path class="transfer-walk" d="M${a[0]} ${a[1]}L${b[0]} ${b[1]}"><title>徒歩連絡：${esc(from)}駅 — ${esc(to)}駅</title></path>` : "";
@@ -95,7 +145,7 @@
     const dots = [...stationsByName.values()].map(s => {
       const [x,y] = s.point, isTransfer = s.lines.length > 1;
       const faded = activeLineId && !s.lines.includes(activeLineId) ? " muted-station" : "";
-      return `<g class="network-station${faded}" transform="translate(${x} ${y})"><title>${esc(s.name)}駅 · ${esc(s.lines.join(" / "))}</title><circle r="${isTransfer ? 6 : 3.5}"/></g>`;
+      return `<g class="network-station${faded}" transform="translate(${x} ${y})"${preview || staticAsset ? "" : ` data-action="map-station" data-station="${esc(s.name)}" role="button" tabindex="0" aria-label="${esc(s.name)}駅を見る"`}><title>${esc(s.name)}駅 · ${esc(s.lines.join(" / "))}</title>${preview || staticAsset ? "" : '<circle class="station-hit" r="14"/>'}<circle r="${isTransfer ? 6 : 3.5}"/></g>`;
     }).join("");
     const labels = majorLabels.map(([name,dx,dy,align]) => {
       const s=stationsByName.get(name); if (!s) return "";
@@ -104,6 +154,13 @@
       return `<text class="network-label${faded}" x="${x+dx}" y="${y+dy}" text-anchor="${align}">${esc(short)}</text>`;
     }).join("");
     const active = lines.find(line => line.id === activeLineId);
+    const journeyPaths = journey ? journey.segments.map(segment => `<path class="journey-path" d="${segment.points.map(([x,y],i) => `${i ? "L" : "M"}${x} ${y}`).join(" ")}"/>`).join("") : "";
+    const selected = stationsByName.get(selectedStationName);
+    const selectedMarker = selected ? `<g class="network-selection" transform="translate(${selected.point[0]} ${selected.point[1]})"><circle r="21"/><circle r="10"/><title>選択中：${esc(selected.name)}駅</title></g>` : "";
+    const journeyMarkers = journey ? [journey.from,journey.to].map((name,i) => {
+      const [x,y] = stationsByName.get(name).point;
+      return `<g class="journey-endpoint" transform="translate(${x} ${y})"><circle r="17"/><text y="6" text-anchor="middle">${i ? "着" : "発"}</text></g>`;
+    }).join("") : "";
     const marker = (id, kind) => {
       if (!active || !id) return "";
       const index = active.stations.findIndex(s => s.id === id);
@@ -117,7 +174,7 @@
       const code=line.id === "Mb" ? "m" : line.id;
       return `<g transform="translate(${x} ${y})"><circle r="17" fill="${line.color}"/><text text-anchor="middle" y="6" class="legend-code">${code}</text><text x="28" y="7" class="legend-name">${esc(line.name.replace("（分岐線）", "（方南町支線）"))}</text></g>`;
     }).join("")}<text x="1535" y="1241" text-anchor="end" class="legend-note">点線は徒歩連絡 · 地理上の位置や所要時間は示しません</text></g>`;
-    return `<svg class="network-svg${preview ? " is-preview" : ""}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="東京メトロ全9路線の独自模式図。各路線の駅順と主な接続駅を示します"><title>きまぐれメトロ旅 路線図</title><defs><pattern id="map-grid${preview ? "-preview" : ""}" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#dbe5e1" stroke-width=".8"/></pattern></defs><rect width="1600" height="1260" fill="#f7f8f3"/><rect width="1600" height="1260" fill="url(#map-grid${preview ? "-preview" : ""})"/>${walks}${routePaths}${dots}${labels}${marker(goalStationId,"goal")}${currentStationId === goalStationId ? "" : marker(currentStationId,"now")}${legend}</svg>`;
+    return `<svg class="network-svg${preview ? " is-preview" : ""}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg" role="${preview || staticAsset ? "img" : "group"}" aria-label="東京メトロ全9路線の独自模式図。各路線の駅順と主な接続駅を示します"><title>きまぐれメトロ旅 路線図</title><defs><pattern id="map-grid${preview ? "-preview" : ""}" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#dbe5e1" stroke-width=".8"/></pattern></defs><rect width="1600" height="1260" fill="#f7f8f3"/><rect width="1600" height="1260" fill="url(#map-grid${preview ? "-preview" : ""})"/>${walks}${routePaths}${journeyPaths}${dots}${labels}${marker(goalStationId,"goal")}${currentStationId === goalStationId ? "" : marker(currentStationId,"now")}${selectedMarker}${journeyMarkers}${legend}</svg>`;
   }
   function lineDiagram(line, game) {
     const stops = line.stations, step = 96, width = (stops.length - 1) * step + 90;
@@ -131,5 +188,5 @@
     }).join("");
     return `<svg class="line-svg" viewBox="0 0 ${width} 100" width="${width}" height="100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(line.name)}の全${stops.length}駅。現在駅とゴールを表示"><path d="M45 43H${45+(stops.length-1)*step}" stroke="${line.color}" stroke-width="7" fill="none" stroke-linecap="round"/>${progress}${nodes}</svg>`;
   }
-  window.METRO_MAP = {overview, lineDiagram, stationCount:stationsByName.size, anchors, routes};
+  window.METRO_MAP = {overview, lineDiagram, findRoute, stations:stationsByName, stationCount:stationsByName.size, anchors, routes};
 })();

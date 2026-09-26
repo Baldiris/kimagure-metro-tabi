@@ -1,0 +1,54 @@
+const fs = require('fs'), vm = require('vm'), assert = require('assert');
+const data = fs.readFileSync(__dirname + '/data.js', 'utf8');
+const map = fs.readFileSync(__dirname + '/metro-map.js', 'utf8');
+const code = fs.readFileSync(__dirname + '/app.js', 'utf8');
+function session(seed = [], initial = null) {
+  let raw = initial, handlers = {}, html = '';
+  const app = {set innerHTML(v) { html = v; }, get innerHTML() { return html; }, addEventListener(type, fn) { handlers[type] = fn; }, querySelector() { return {scrollTo() {}, style: {setProperty() {}}}; }};
+  const ctx = {window: {}, document: {getElementById() { return app; }}, crypto: {randomUUID: () => 'uuid', getRandomValues(a) { a[0] = seed.shift() ?? 0; return a; }}, localStorage: {getItem() { return raw; }, setItem(_, value) { raw = value; }, removeItem() { raw = null; }}, matchMedia() { return {matches: true}; }, confirm() { return true; }, Date, Math, console, encodeURIComponent};
+  vm.createContext(ctx); vm.runInContext(data, ctx); vm.runInContext(map, ctx); vm.runInContext(code, ctx);
+  return {click(action, line, id, station) { handlers.click({target: {closest() { return {dataset: {action, line, id, station}, disabled: false}; }}}); }, get game() { return raw && JSON.parse(raw); }, get html() { return html; }, get raw() { return raw; }, lines: ctx.window.METRO_DATA.lines, metroMap: ctx.window.METRO_MAP};
+}
+const first = session();
+assert.equal(first.lines.length, 10);
+assert.equal(new Set(first.lines.map(line => line.id)).size, 10);
+assert(first.html.includes('class="network-svg is-preview"'));
+first.click('map'); assert(first.html.includes('class="network-viewport"'));
+first.click('map-line', 'H'); assert(first.html.includes('data-route="H"'));
+first.click('map-station', undefined, undefined, '渋谷'); assert(first.html.includes('SELECTED STATION'));
+first.click('map-from', undefined, undefined, '渋谷');
+first.click('map-to', undefined, undefined, '浅草');
+assert(first.html.includes('route-metrics') && first.html.includes('journey-path'));
+const result = first.metroMap.findRoute('渋谷','浅草');
+assert.equal(result.from, '渋谷'); assert.equal(result.to, '浅草');
+assert(result.hops > 0 && result.hops <= 18);
+assert.equal(result.segments[0].from, '渋谷'); assert.equal(result.segments.at(-1).to, '浅草');
+assert.equal(first.metroMap.findRoute('中野坂上','方南町').hops, 3);
+assert(first.metroMap.findRoute('新木場','北綾瀬').transfers > 0);
+first.click('map-swap'); assert(first.html.includes('<strong>浅草</strong>'));
+first.click('map-clear'); assert(!first.html.includes('journey-path'));
+first.click('back'); assert(first.html.includes('data-action="start"'));
+for (const line of first.lines) {
+  const s = session([0, 2, 5, 0, 1]);
+  s.click('start'); assert(s.html.includes('data-line="' + line.id + '"'));
+  s.click('select-line', line.id); assert.equal(s.game.lineId, line.id);
+  s.click('choose-start'); assert.equal(s.game.startStationId, line.stations[0].id);
+  s.click('choose-goal'); assert.equal(s.game.goalStationId, line.stations[3].id);
+  assert(s.html.includes('class="line-svg"'));
+  s.click('map'); assert(s.html.includes('network-marker now') && s.html.includes('network-marker goal'));
+  s.click('back'); assert.equal(s.game.gameState, 'READY_TO_ROLL');
+  s.click('roll'); assert.equal(s.game.currentStationId, line.stations[0].id);
+  assert.equal(s.game.pendingStationId, line.stations[3].id);
+  const restored = session([], s.raw); assert.equal(restored.game.lineId, line.id);
+  restored.click('arrive'); assert.equal(restored.game.gameState, 'GOAL');
+  assert.equal(restored.game.visitHistory[0].quests.length, 2);
+  const quest = restored.game.visitHistory[0].quests[0].id;
+  restored.click('quest', undefined, quest);
+  assert.equal(session([], restored.raw).game.visitHistory[0].quests[0].completed, true);
+  const reverse = session([line.stations.length - 1, 0, 0, 0, 1]);
+  reverse.click('start'); reverse.click('select-line', line.id);
+  reverse.click('choose-start'); reverse.click('choose-goal');
+  assert.equal(reverse.game.direction, -1); reverse.click('roll');
+  assert.equal(reverse.game.pendingStationId, line.stations.at(-2).id);
+}
+console.log('OK: 10 line choices, forward and reverse movement, reload, arrival and quest persistence');
