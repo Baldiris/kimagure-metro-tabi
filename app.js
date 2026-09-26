@@ -206,7 +206,7 @@
     return `<div class="route-builder"><div><small>出発</small><strong>${escapeHtml(mapFrom)}</strong></div><span>→</span><div><small>到着</small><strong>${escapeHtml(mapTo)}</strong></div></div>
       <div class="route-metrics"><span><b>${journey.hops}</b>駅</span><span><b>${journey.transfers}</b>回乗換</span></div>
       <ol class="route-steps">${journey.segments.map((segment,i) => `<li style="--step-color:${lines.find(l => l.id === segment.lineId).color}"><span class="step-code">${segment.lineId === "Mb" ? "m" : segment.lineId}</span><div><b>${escapeHtml(names[segment.lineId])}</b><small>${escapeHtml(segment.from)} → ${escapeHtml(segment.to)} · ${segment.hops}駅</small></div></li>`).join("")}</ol>
-      <p class="map-search-hint">駅数が少ない経路を表示。実際の乗換動線・所要時間・運賃は含みません。</p>`;
+      <p class="map-search-hint">駅数が少ない経路を表示。同名駅での乗換のみ計算し、点線の徒歩連絡・実際の乗換動線・所要時間・運賃は含みません。</p>`;
   }
   function miniMap() {
     if (!game?.goalStationId) return "";
@@ -222,13 +222,14 @@
       <p class="muted">駅を探して、出発駅と到着駅を選択。全9路線と方南町支線をまたぐルートを模式図で確かめられます。</p>
       <div class="map-search"><label for="map-search-input">駅を探す</label><div class="map-search-box"><span aria-hidden="true">⌕</span><input id="map-search-input" type="search" autocomplete="off" placeholder="例：渋谷、M06、北千住" value="${escapeHtml(mapSearchQuery)}" aria-controls="map-search-results"></div><div id="map-search-results" aria-live="polite">${searchResults()}</div></div>
       ${stationDetail(mapSelectedName)}
-      <section class="route-panel" aria-label="ルートプレビュー"><div class="route-panel-head"><div><span class="mini-label">ROUTE PREVIEW</span><h3>2駅間のルート</h3></div><div class="route-panel-actions"><button data-action="map-swap" ${!mapFrom || !mapTo ? "disabled" : ""} aria-label="出発駅と到着駅を入れ替える">入替</button><button data-action="map-clear" ${!mapFrom && !mapTo ? "disabled" : ""}>解除</button></div></div>${routeDetail(journey)}</section>
+      ${journey ? `<div class="map-quick-summary"><span>${escapeHtml(mapFrom)} → ${escapeHtml(mapTo)}</span><b>${journey.hops}駅 · 乗換${journey.transfers}回</b></div>` : ""}
       <div class="map-filters" aria-label="表示する路線">
         <button class="map-chip ${!focus ? "active" : ""}" data-action="map-line" data-line="all" aria-pressed="${!focus}">全路線</button>
         ${lines.map(item => `<button class="map-chip ${mapFocusId === item.id ? "active" : ""}" data-action="map-line" data-line="${item.id}" aria-pressed="${mapFocusId === item.id}" style="--chip-color:${item.color}"><span>${code(item)}</span>${item.name.replace("（分岐線）", "支線")}</button>`).join("")}</div>
       <div class="map-controls"><span>ドラッグで移動 · 駅をタップ</span><div><button data-action="map-zoom-out" aria-label="路線図を縮小" ${mapZoom <= .7 ? "disabled" : ""}>−</button><span aria-live="polite">${Math.round(mapZoom*100)}%</span><button data-action="map-zoom-in" aria-label="路線図を拡大" ${mapZoom >= 1.6 ? "disabled" : ""}>＋</button></div></div>
       <div class="network-viewport" aria-label="スクロールできる全路線図"><div class="map-canvas" style="width:${Math.round(1200*mapZoom)}px">${metroMap.overview({activeLineId:focus?.id,currentStationId:game && focus && game.lineId === focus.id ? game.currentStationId : null,goalStationId:game && focus && game.lineId === focus.id ? game.goalStationId : null,selectedStationName:mapSelectedName,journey})}</div></div>
       <p class="map-disclaimer">独自の模式図です。地理上の位置・距離・所要時間を示すものではありません。<a href="./metro-network.svg" target="_blank" rel="noopener noreferrer">SVGを大きく開く ↗</a></p>
+      <section class="route-panel" aria-label="ルートプレビュー"><div class="route-panel-head"><div><span class="mini-label">ROUTE PREVIEW</span><h3>2駅間のルート</h3></div><div class="route-panel-actions"><button data-action="map-swap" ${!mapFrom || !mapTo ? "disabled" : ""} aria-label="出発駅と到着駅を入れ替える">入替</button><button data-action="map-clear" ${!mapFrom && !mapTo ? "disabled" : ""}>解除</button></div></div>${routeDetail(journey)}</section>
       ${focus ? `<section class="map-line-detail"><div class="line-key"><span class="line-pill" style="background:${focus.color}">${code(focus)}</span><h3>${focus.name.replace("（分岐線）", "（方南町支線）")}</h3></div>
         <p>${focus.stations[0].name} → ${focus.stations.at(-1).name} · ${focus.stations.length}駅</p>
         <div class="map-stop-list">${focus.stations.map(s => `<button data-action="map-station" data-station="${escapeHtml(s.name)}"><small>${s.id}</small>${escapeHtml(s.name)}</button>`).join("")}</div></section>` : ""}</div>`;
