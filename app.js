@@ -2,6 +2,7 @@
   "use strict";
   const KEY = "kimagure-metro-v1";
   const lines = window.METRO_DATA.lines;
+  const metroMap = window.METRO_MAP;
   let line = lines[0];
   let stations = line.stations;
   const setLine = (id) => {
@@ -28,6 +29,7 @@
   const station = (id) => stations[byId(id)];
   let game = null;
   let view = "game";
+  let mapFocusId = null;
   let busy = false;
   let lotteryPreview = null;
   let displayStation = null;
@@ -174,16 +176,23 @@
   };
   function miniMap() {
     if (!game?.goalStationId) return "";
-    const at = byId(game.currentStationId), start = byId(game.startStationId), goal = byId(game.goalStationId);
-    const ordered = stations;
     return `<section class="map-card"><div class="map-head"><b>${lineName()}の旅路</b><span class="mini-label">${line.id} · ${stations.length}駅</span></div>
-      <div class="mini-route" aria-label="出発駅からゴール駅までの駅順">
-      ${ordered.map(s => {
-        const i = byId(s.id);
-        const past = game.direction > 0 ? i >= start && i < at : i <= start && i > at;
-        return `<div class="mini-node ${i === at ? "current" : ""} ${i === goal ? "goal" : ""} ${past ? "past" : ""}">
-          <i aria-hidden="true"></i><b>${s.name}</b><small>${s.id}</small></div>`;
-      }).join("")}</div></section>`;
+      <div class="line-diagram-viewport">${metroMap.lineDiagram(line, game)}</div></section>`;
+  }
+  function mapScreen() {
+    const focus = lines.find(item => item.id === mapFocusId);
+    const code = item => item.id === "Mb" ? "m" : item.id;
+    return `<div class="fade-in"><span class="eyebrow">TOKYO METRO / SCHEMATIC</span>
+      <h2 class="screen-title">路線図から、旅を見る。</h2>
+      <p class="muted">全9路線と方南町支線の駅順・接続駅を描いた模式図です。路線を選ぶと強調表示します。</p>
+      <div class="map-filters" aria-label="表示する路線">
+        <button class="map-chip ${!focus ? "active" : ""}" data-action="map-line" data-line="all" aria-pressed="${!focus}">全路線</button>
+        ${lines.map(item => `<button class="map-chip ${mapFocusId === item.id ? "active" : ""}" data-action="map-line" data-line="${item.id}" aria-pressed="${mapFocusId === item.id}" style="--chip-color:${item.color}"><span>${code(item)}</span>${item.name.replace("（分岐線）", "支線")}</button>`).join("")}</div>
+      <div class="network-viewport" aria-label="スクロールできる全路線図">${metroMap.overview({activeLineId:focus?.id,currentStationId:game && focus && game.lineId === focus.id ? game.currentStationId : null,goalStationId:game && focus && game.lineId === focus.id ? game.goalStationId : null})}</div>
+      <p class="map-disclaimer">独自の模式図です。地理上の位置・距離・所要時間を示すものではありません。</p>
+      ${focus ? `<section class="map-line-detail"><div class="line-key"><span class="line-pill" style="background:${focus.color}">${code(focus)}</span><h3>${focus.name.replace("（分岐線）", "（方南町支線）")}</h3></div>
+        <p>${focus.stations[0].name} → ${focus.stations.at(-1).name} · ${focus.stations.length}駅</p>
+        <div class="map-stop-list">${focus.stations.map(s => `<span><small>${s.id}</small>${s.name}</span>`).join("")}</div></section>` : ""}</div>`;
   }
   function questList() {
     const visit = game.visitHistory.at(-1);
@@ -213,6 +222,7 @@
     }).join("");
   }
   function screen() {
+    if (view === "map") return { body: mapScreen(), action: '<button class="primary" data-action="back">旅の画面に戻る　→</button>' };
     if (view === "history" && game?.startStationId) return { body: history(), action: '<button class="primary" data-action="back">旅に戻る</button>' };
     if (lotteryPreview) return {
       body: `<div class="fade-in"><span class="eyebrow">STATION LOTTERY</span><h2 class="screen-title">${lotteryPreview.kind === "DESTINATION" ? "ゴール駅" : "出発駅"}を抽選中</h2>
@@ -225,9 +235,8 @@
     if (state === "HOME") return {
       body: `<div class="fade-in"><span class="eyebrow">TOKYO METRO / ALL LINES</span><h2 class="screen-title">次の駅は、<br>サイコロ次第。</h2>
         <p class="muted">東京メトロ全9路線から、今日の旅を選ぼう。出発駅とゴールは運次第。</p>
-        <div class="hero-slot"><img class="hero-photo" src="./metro-hero.webp" alt="地下鉄ホームに入る列車のイメージ" width="1536" height="1024">
-          <div class="hero-slot-overlay"><div class="slot-signal"><span>YOUR NEXT STOP / TOKYO</span><span class="signal-led"></span></div>
-          <div class="slot-window" aria-hidden="true"><span>？</span><span class="slot-arrow">→</span><span>？</span></div></div></div>
+        <button class="hero-map" data-action="map" aria-label="全路線のSVG路線図を見る">${metroMap.overview({preview:true})}
+          <span class="hero-map-caption"><span>9 LINES / SVG MAP</span><strong>路線図を見る <b>↗</b></strong></span></button>
         <div class="feature-steps"><div><b>01</b>駅を抽選</div><div><b>02</b>サイコロで進む</div><div><b>03</b>街を発見</div></div>
         ${restoreError ? '<p class="error">保存された旅を読み込めませんでした。新しい旅を始められます。</p>' : ""}</div>`,
       action: '<button class="primary" data-action="start">新しい旅をはじめる　→</button>'
@@ -302,14 +311,23 @@
         <div class="side-foot">東京メトロ全9路線で遊べます。<br>ログイン不要。進行はこの端末に保存されます。</div></aside>
       <section class="device" aria-label="旅の操作画面"><header class="app-top">
         <div class="app-logo"><span>${game?.lineId || "METRO"}</span>きまぐれメトロ旅</div>
-        ${canHistory ? `<button class="icon-btn" data-action="${view === "history" ? "back" : "history"}">${view === "history" ? "戻る" : "旅の記録"}</button>` : ""}
+        <div class="header-actions"><button class="icon-btn" data-action="${view === "map" ? "back" : "map"}">${view === "map" ? "戻る" : "路線図"}</button>
+        ${canHistory ? `<button class="icon-btn" data-action="${view === "history" ? "back" : "history"}">${view === "history" ? "戻る" : "記録"}</button>` : ""}</div>
         </header><div class="app-body" id="screen" tabindex="-1" aria-live="polite">${s.body}</div>
-        <footer class="action-area">${s.action}${game && view !== "history" ? '<button class="text-link action-sub" data-action="restart">新しい旅をはじめる</button>' : ""}</footer></section>
+        <footer class="action-area">${s.action}${game && !["history","map"].includes(view) ? '<button class="text-link action-sub" data-action="restart">新しい旅をはじめる</button>' : ""}</footer></section>
       <aside class="side side-right"><div><div class="line-key"><span class="line-pill">${line.id === "Mb" ? "m" : line.id}</span><h2>${lineName()} <span class="mini-label">${stations.length}駅</span></h2></div>
         <div class="route-side" aria-label="${lineName()}全${stations.length}駅">${sideMap()}</div></div>
         <p class="side-hint">● 現在地　● ゴール<br>途中でページを閉じても、次回続きから再開できます。</p></aside>
     </main>`;
     app.querySelector(".shell").style.setProperty("--line-color", line.color);
+    const viewport = app.querySelector(".network-viewport");
+    if (viewport && Number.isFinite(viewport.scrollWidth)) {
+      const focusLine = lines.find(item => item.id === mapFocusId);
+      const at = focusLine && game?.lineId === focusLine.id ? focusLine.stations.findIndex(s => s.id === game?.currentStationId) : -1;
+      const point = focusLine ? metroMap.routes.get(focusLine.id)[at >= 0 ? at : Math.floor(focusLine.stations.length / 2)] : metroMap.anchors["大手町"];
+      viewport.scrollLeft = point[0] / 1600 * viewport.scrollWidth - viewport.clientWidth / 2;
+      viewport.scrollTop = point[1] / 1080 * viewport.scrollHeight - viewport.clientHeight / 2;
+    }
   }
   app.addEventListener("click", e => {
     const button = e.target.closest("[data-action]");
@@ -328,9 +346,11 @@
     if (action === "arrive") arrive();
     if (action === "quest") toggleQuest(button.dataset.id);
     if (action === "next" && game?.gameState === "ARRIVED") save({ gameState: "READY_TO_ROLL" });
+    if (action === "map") { mapFocusId = game?.lineId || null; view = "map"; render(); }
+    if (action === "map-line" && view === "map") { mapFocusId = button.dataset.line === "all" ? null : button.dataset.line; render(); }
     if (action === "history" && game) { view = "history"; render(); }
     if (action === "back") { view = "game"; render(); }
-    if (["select-line","choose-start","choose-goal","roll","arrive","next","history","back"].includes(action))
+    if (["select-line","choose-start","choose-goal","roll","arrive","next","history","back","map"].includes(action))
       app.querySelector("#screen")?.scrollTo(0, 0);
   });
   function saveNew() { start(); }
