@@ -1,8 +1,17 @@
 (() => {
   "use strict";
   const KEY = "kimagure-metro-v1";
-  const line = window.METRO_DATA.lines[0];
-  const stations = line.stations;
+  const lines = window.METRO_DATA.lines;
+  let line = lines[0];
+  let stations = line.stations;
+  const setLine = (id) => {
+    const selected = lines.find(item => item.id === id);
+    if (!selected) return false;
+    line = selected;
+    stations = selected.stations;
+    return true;
+  };
+  const lineName = () => line.name.replace("（分岐線）", "（方南町支線）");
   const app = document.getElementById("app");
   const faces = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
   const uuid = () => crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "-" + Math.random();
@@ -29,7 +38,7 @@
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const saved = JSON.parse(raw);
-      if (saved.schemaVersion !== 1 || !saved.gameState || saved.lineId !== "G" ||
+      if (saved.schemaVersion !== 1 || !saved.gameState || !setLine(saved.lineId) ||
           (saved.startStationId && byId(saved.startStationId) < 0) ||
           (saved.goalStationId && byId(saved.goalStationId) < 0) ||
           (saved.currentStationId && byId(saved.currentStationId) < 0) ||
@@ -52,13 +61,17 @@
   function start() {
     game = {
       schemaVersion: 1, gameId: uuid(), gameState: "LINE_SELECTION",
-      lineId: "G", startStationId: null, goalStationId: null,
+      lineId: null, startStationId: null, goalStationId: null,
       currentStationId: null, pendingStationId: null,
       direction: 0, lastDice: null, visitHistory: [],
       updatedAt: new Date().toISOString()
     };
     view = "game";
     save({});
+  }
+  function selectLine(id) {
+    if (busy || game?.gameState !== "LINE_SELECTION" || !setLine(id)) return;
+    save({ lineId: id, gameState: "START_LOTTERY" });
   }
   function chooseStart() {
     if (busy || game?.gameState !== "START_LOTTERY") return;
@@ -163,7 +176,7 @@
     if (!game?.goalStationId) return "";
     const at = byId(game.currentStationId), start = byId(game.startStationId), goal = byId(game.goalStationId);
     const ordered = stations;
-    return `<section class="map-card"><div class="map-head"><b>銀座線の旅路</b><span class="mini-label">G 01—19</span></div>
+    return `<section class="map-card"><div class="map-head"><b>${lineName()}の旅路</b><span class="mini-label">${line.id} · ${stations.length}駅</span></div>
       <div class="mini-route" aria-label="出発駅からゴール駅までの駅順">
       ${ordered.map(s => {
         const i = byId(s.id);
@@ -205,13 +218,13 @@
       body: `<div class="fade-in"><span class="eyebrow">STATION LOTTERY</span><h2 class="screen-title">${lotteryPreview.kind === "DESTINATION" ? "ゴール駅" : "出発駅"}を抽選中</h2>
         <div class="panel-dark" role="status"><span class="display-kicker">${lotteryPreview.kind}</span>
         <div class="display-station ${displayStation === lotteryPreview.finalName ? "" : "reel-flash"}">${displayStation || "？？？"}</div>
-        <span class="display-code">GINZA LINE · 19 STATIONS</span><div class="display-underline"></div></div></div>`,
+        <span class="display-code">${lineName()} · ${stations.length}駅</span><div class="display-underline"></div></div></div>`,
       action: '<button class="primary" disabled>抽選中…</button>'
     };
     const state = game?.gameState || "HOME";
     if (state === "HOME") return {
-      body: `<div class="fade-in"><span class="eyebrow">TOKYO METRO / GINZA LINE</span><h2 class="screen-title">次の駅は、<br>サイコロ次第。</h2>
-        <p class="muted">行き先を決めずに、いつもの街へ。銀座線の19駅から始まる小さな旅。</p>
+      body: `<div class="fade-in"><span class="eyebrow">TOKYO METRO / ALL LINES</span><h2 class="screen-title">次の駅は、<br>サイコロ次第。</h2>
+        <p class="muted">東京メトロ全9路線から、今日の旅を選ぼう。出発駅とゴールは運次第。</p>
         <div class="hero-slot"><div class="slot-signal"><span>DEPARTURE BOARD</span><span class="signal-led"></span></div>
           <div class="slot-window" aria-hidden="true">渋谷　→　？</div></div>
         <div class="feature-steps"><div><b>01</b>駅を抽選</div><div><b>02</b>サイコロで進む</div><div><b>03</b>街を発見</div></div>
@@ -219,22 +232,22 @@
       action: '<button class="primary" data-action="start">新しい旅をはじめる　→</button>'
     };
     if (state === "LINE_SELECTION") return {
-      body: `<div class="fade-in"><span class="eyebrow">SELECT A LINE</span><h2 class="screen-title">まずは、銀座線から。</h2>
-        <p class="muted">渋谷から浅草まで、全19駅。出発駅とゴールは、このあと抽選で決まります。</p>
-        <div class="line-card"><span class="line-pill">G</span><div><strong>銀座線</strong><p>渋谷 — 浅草 · 19駅</p></div></div>
+      body: `<div class="fade-in"><span class="eyebrow">SELECT A LINE</span><h2 class="screen-title">今日は、どの路線？</h2>
+        <p class="muted">東京メトロ全9路線と丸ノ内線の方南町支線。路線を選んだら、出発駅とゴールを抽選します。</p>
+        <div class="line-list">${lines.map(item => `<button class="line-card" data-action="select-line" data-line="${item.id}" style="--line-color:${item.color}"><span class="line-pill">${item.id === "Mb" ? "m" : item.id}</span><span><strong>${item.name.replace("（分岐線）", "（方南町支線）")}</strong><small>${item.stations[0].name} — ${item.stations.at(-1).name} · ${item.stations.length}駅</small></span><span class="line-chevron">→</span></button>`).join("")}</div>
         <div class="panel"><span class="mini-label">HOW TO PLAY</span>
           <div class="feature-steps"><div><b>01</b>駅を抽選</div><div><b>02</b>サイコロで進む</div><div><b>03</b>到着して探索</div></div></div></div>`,
-      action: '<button class="primary" data-action="select-line">銀座線で旅をはじめる　→</button>'
+      action: '<span class="selection-hint">路線を選んで旅をはじめる</span>'
     };
     if (state === "START_LOTTERY" || state === "GOAL_LOTTERY") {
       const isStart = state === "START_LOTTERY";
       return {
         body: `<div class="fade-in"><span class="eyebrow">STEP ${isStart ? "01" : "02"} / 02</span>
           <h2 class="screen-title">${isStart ? "出発駅を決めよう" : "ゴール駅を決めよう"}</h2>
-          <p class="muted">${isStart ? "銀座線19駅から、出発駅を抽選します。" : "出発駅は " + label(game.startStationId) + "。次はゴールを抽選します。"}</p>
+          <p class="muted">${isStart ? lineName() + stations.length + "駅から、出発駅を抽選します。" : "出発駅は " + label(game.startStationId) + "。次はゴールを抽選します。"}</p>
           <div class="panel-dark"><span class="display-kicker">${isStart ? "START STATION" : "DESTINATION"}</span>
             <div class="display-station ${busy ? "reel-flash" : ""}">${displayStation || (isStart ? "？？？" : "？？？")}</div>
-            <span class="display-code">GINZA LINE · 19 STATIONS</span><div class="display-underline"></div></div>
+            <span class="display-code">${lineName()} · ${stations.length}駅</span><div class="display-underline"></div></div>
           <p class="route-note">抽選した駅はそのまま保存されます。ページを閉じても続きから再開できます。</p></div>`,
         action: `<button class="primary" data-action="${isStart ? "choose-start" : "choose-goal"}" ${busy ? "disabled" : ""}>${isStart ? "出発駅を抽選する" : "ゴール駅を抽選する"}　→</button>`
       };
@@ -262,7 +275,7 @@
     };
     if (state === "ARRIVED") return {
       body: `<div class="fade-in"><span class="eyebrow">ARRIVED / ${game.currentStationId}</span><h2 class="screen-title">着きました。</h2>
-        <div class="arrival-ticket"><div class="ticket-row"><span>GINZA LINE</span><span>STOP ${game.currentStationId}</span></div>
+        <div class="arrival-ticket"><div class="ticket-row"><span>${lineName()}</span><span>STOP ${game.currentStationId}</span></div>
           <strong>${label(game.currentStationId)}</strong><div class="ticket-row"><span>GOAL まで</span><span>${remaining()} 駅</span></div></div>
         ${questList()}${miniMap()}<p class="route-note">クエストは任意です。ひとつも達成しなくても次へ進めます。</p></div>`,
       action: '<button class="primary" data-action="next">次のサイコロへ　→</button>'
@@ -282,19 +295,20 @@
     const s = screen();
     const canHistory = game?.startStationId && game.visitHistory.length > 0;
     app.innerHTML = `<main class="shell">
-      <aside class="side side-left"><div class="brand"><span class="brand-mark">G</span>きまぐれメトロ旅</div>
+      <aside class="side side-left"><div class="brand"><span class="brand-mark">M</span>きまぐれメトロ旅</div>
         <div><span class="side-kicker">A SMALL TRIP, BY CHANCE</span><h1>次の駅は、<br><strong>サイコロ次第。</strong></h1>
           <p>出発駅も、ゴールも、今日の運次第。ひと駅ずつ進むたび、街に新しい発見がある。</p></div>
-        <div class="side-foot">銀座線19駅で遊べます。<br>ログイン不要。進行はこの端末に保存されます。</div></aside>
+        <div class="side-foot">東京メトロ全9路線で遊べます。<br>ログイン不要。進行はこの端末に保存されます。</div></aside>
       <section class="device" aria-label="旅の操作画面"><header class="app-top">
-        <div class="app-logo"><span>G / 01</span>きまぐれメトロ旅</div>
+        <div class="app-logo"><span>${game?.lineId || "METRO"}</span>きまぐれメトロ旅</div>
         ${canHistory ? `<button class="icon-btn" data-action="${view === "history" ? "back" : "history"}">${view === "history" ? "戻る" : "旅の記録"}</button>` : ""}
         </header><div class="app-body" id="screen" tabindex="-1" aria-live="polite">${s.body}</div>
         <footer class="action-area">${s.action}${game && view !== "history" ? '<button class="text-link action-sub" data-action="restart">新しい旅をはじめる</button>' : ""}</footer></section>
-      <aside class="side side-right"><div><div class="line-key"><span class="line-pill">G</span><h2>銀座線 <span class="mini-label">GINZA LINE</span></h2></div>
-        <div class="route-side" aria-label="銀座線全19駅">${sideMap()}</div></div>
+      <aside class="side side-right"><div><div class="line-key"><span class="line-pill">${line.id === "Mb" ? "m" : line.id}</span><h2>${lineName()} <span class="mini-label">${stations.length}駅</span></h2></div>
+        <div class="route-side" aria-label="${lineName()}全${stations.length}駅">${sideMap()}</div></div>
         <p class="side-hint">● 現在地　● ゴール<br>途中でページを閉じても、次回続きから再開できます。</p></aside>
     </main>`;
+    app.querySelector(".shell").style.setProperty("--line-color", line.color);
   }
   app.addEventListener("click", e => {
     const button = e.target.closest("[data-action]");
@@ -307,7 +321,7 @@
     }
     if (action === "clear") { reset(); return; }
     if (action === "choose-start") chooseStart();
-    if (action === "select-line" && game?.gameState === "LINE_SELECTION") save({ gameState: "START_LOTTERY" });
+    if (action === "select-line") selectLine(button.dataset.line);
     if (action === "choose-goal") chooseGoal();
     if (action === "roll") roll();
     if (action === "arrive") arrive();
