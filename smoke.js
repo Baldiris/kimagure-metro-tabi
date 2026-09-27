@@ -1,17 +1,24 @@
 const fs = require('fs'), vm = require('vm'), assert = require('assert');
 const data = fs.readFileSync(__dirname + '/data.js', 'utf8');
+const quests = fs.readFileSync(__dirname + '/quest-data.js', 'utf8');
 const map = fs.readFileSync(__dirname + '/metro-map.js', 'utf8');
 const code = fs.readFileSync(__dirname + '/app.js', 'utf8');
 function session(seed = [], initial = null) {
   let raw = initial, handlers = {}, html = '';
   const app = {set innerHTML(v) { html = v; }, get innerHTML() { return html; }, addEventListener(type, fn) { handlers[type] = fn; }, querySelector() { return {scrollTo() {}, style: {setProperty() {}}}; }};
   const ctx = {window: {}, document: {getElementById() { return app; }}, crypto: {randomUUID: () => 'uuid', getRandomValues(a) { a[0] = seed.shift() ?? 0; return a; }}, localStorage: {getItem() { return raw; }, setItem(_, value) { raw = value; }, removeItem() { raw = null; }}, matchMedia() { return {matches: true}; }, confirm() { return true; }, Date, Math, console, encodeURIComponent};
-  vm.createContext(ctx); vm.runInContext(data, ctx); vm.runInContext(map, ctx); vm.runInContext(code, ctx);
+  vm.createContext(ctx); vm.runInContext(data, ctx); vm.runInContext(quests, ctx); vm.runInContext(map, ctx); vm.runInContext(code, ctx);
   return {click(action, line, id, station, mode) { handlers.click({target: {closest() { return {dataset: {action, line, id, station, mode}, disabled: false}; }}}); }, get game() { return raw && JSON.parse(raw); }, get html() { return html; }, get raw() { return raw; }, lines: ctx.window.METRO_DATA.lines, metroMap: ctx.window.METRO_MAP};
 }
 const first = session();
 assert.equal(first.lines.length, 10);
 assert.equal(new Set(first.lines.map(line => line.id)).size, 10);
+const everyStation = first.lines.flatMap(line => line.stations);
+assert.equal(new Set(everyStation.map(s=>s.name)).size, 144);
+assert(everyStation.every(s=>s.quests.length===8 &&
+  s.quests.filter(q=>q.category==='街の手がかり').length===2 &&
+  s.quests.filter(q=>q.category==='小さな寄り道').length===6 &&
+  s.quests.every(q=>!q.text.includes('写真') && !q.text.includes('購入'))));
 assert(first.html.includes('class="shell home-shell"'));
 assert(first.html.includes('class="network-svg is-preview"'));
 assert(first.html.includes('src="./metro-hero-v2.webp"'));
@@ -56,9 +63,20 @@ for (const line of first.lines) {
   restored.click('resume'); assert(restored.html.includes('data-action="arrive"'));
   restored.click('arrive'); assert.equal(restored.game.gameState, 'GOAL');
   assert.equal(restored.game.visitHistory[0].quests.length, 2);
+  assert.deepEqual(restored.game.visitHistory[0].quests.map(q=>q.category), ['街の手がかり','小さな寄り道']);
+  assert(restored.html.includes('別の2つを選ぶ'));
+  const firstQuestIds = restored.game.visitHistory[0].quests.map(q=>q.id);
+  restored.click('reroll-quests');
+  assert(restored.game.visitHistory[0].quests.every(q=>!firstQuestIds.includes(q.id)));
+  assert(restored.html.includes('別の2つを選ぶ'));
   const quest = restored.game.visitHistory[0].quests[0].id;
   restored.click('quest', undefined, quest);
   assert.equal(session([], restored.raw).game.visitHistory[0].quests[0].completed, true);
+  assert(!restored.html.includes('別の2つを選ぶ'));
+  const completedQuestIds = restored.game.visitHistory[0].quests.map(q=>q.id);
+  restored.click('reroll-quests');
+  assert.deepEqual(restored.game.visitHistory[0].quests.map(q=>q.id),completedQuestIds);
+  restored.click('history'); assert(restored.html.includes('この駅のクエストを見る'));
   const reverse = session([line.stations.length - 1, 0, 0, 0, 1]);
   reverse.click('start'); reverse.click('select-mode', undefined, undefined, undefined, 'single'); reverse.click('select-line', line.id);
   reverse.click('choose-start'); reverse.click('choose-goal');

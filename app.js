@@ -216,12 +216,8 @@
     if (busy || game?.gameState !== "TRAVELING" || !game.pendingStationId) return;
     const stop = crossLine() ? routeStop(game.pendingIndex) : null;
     const target = crossLine() ? lineById(stop.lineId).stations.find(s => s.id === stop.id) : station(game.pendingStationId);
-    const pool = [...target.quests];
-    const quests = [];
-    for (let i = 0; i < 2; i++) {
-      const [q] = pool.splice(random(pool.length), 1);
-      quests.push({ ...q, stationId: target.id, drawnAt: new Date().toISOString(), completed: false });
-    }
+    const previousVisit = [...game.visitHistory].reverse().find(v => v.stationName === target.name);
+    const quests = drawQuests(target,previousVisit?.quests.map(q=>q.id) || []);
     const isGoal = crossLine() ? game.pendingIndex === game.routeStops.length-1 : target.id === game.goalStationId;
     const visit = { visitId: uuid(), stationId: target.id, arrivedAt: new Date().toISOString(),
       lineId: stop?.lineId || line.id, stationName:target.name, diceValue: game.lastDice, quests, isGoal };
@@ -231,6 +227,23 @@
       visitHistory: [...game.visitHistory, visit],
       gameState: isGoal ? "GOAL" : "ARRIVED"
     });
+  }
+  function drawQuests(target, exclude = []) {
+    const make = category => {
+      const pool = target.quests.filter(q => q.category === category && !exclude.includes(q.id));
+      const q = pool[random(pool.length)];
+      return { ...q, stationId: target.id, drawnAt: new Date().toISOString(), completed:false };
+    };
+    return [make("街の手がかり"),make("小さな寄り道")];
+  }
+  function rerollQuests() {
+    if (busy || !game || !["ARRIVED","GOAL"].includes(game.gameState)) return;
+    const history = [...game.visitHistory], last = history.at(-1);
+    if (!last || last.quests.some(q => q.completed)) return;
+    const target = lineById(last.lineId || game.lineId)?.stations.find(s => s.id === last.stationId);
+    if (!target) return;
+    history[history.length-1] = { ...last, quests:drawQuests(target,last.quests.map(q=>q.id)) };
+    save({visitHistory:history});
   }
   function toggleQuest(id) {
     if (!game || !["ARRIVED", "GOAL"].includes(game.gameState)) return;
@@ -316,19 +329,24 @@
   function questList() {
     const visit = game.visitHistory.at(-1);
     if (!visit) return "";
-    return `<section class="panel"><span class="mini-label">STATION QUESTS / 任意で楽しむ</span>
-      <h3 style="margin:9px 0 14px">この駅で、ふたつの発見</h3>
+    const done = visit.quests.filter(q => q.completed).length;
+    const canReroll = !done;
+    return `<section class="panel quest-panel"><div class="quest-head"><div><span class="mini-label">STATION QUESTS / 任意で楽しむ</span>
+      <h3>この駅で、ふたつの発見</h3></div><span class="quest-progress">${done} / 2</span></div>
+      <p class="quest-intro">${visit.quests.every(q => q.category) ? "気が向いたものだけ。写真撮影や買い物は必要ありません。" : "気が向いたものだけ、自由に楽しめます。"}</p>
       ${visit.quests.map((q, i) => `<div class="quest ${q.completed ? "done" : ""}">
-        <button data-action="quest" data-id="${q.id}" aria-label="クエスト${i + 1}を${q.completed ? "未達成に戻す" : "達成にする"}" aria-pressed="${q.completed}">${q.completed ? "✓" : ""}</button>
-        <div><small>QUEST 0${i + 1}</small><p>${q.text}</p></div>
-      </div>`).join("")}</section>`;
+        <button data-action="quest" data-id="${escapeHtml(q.id)}" aria-label="クエスト${i + 1}を${q.completed ? "未達成に戻す" : "達成にする"}" aria-pressed="${q.completed}">${q.completed ? "✓" : ""}</button>
+        <div><small>QUEST 0${i + 1} <span class="quest-kind">${escapeHtml(q.category || "街の発見")}</span></small><p>${escapeHtml(q.text)}</p></div>
+      </div>`).join("")}
+      ${canReroll ? '<button class="quest-reroll" data-action="reroll-quests">別の2つを選ぶ ↻</button>' : ""}</section>`;
   }
   function history() {
     return `<span class="eyebrow">YOUR JOURNEY</span><h2 class="screen-title">旅の記録</h2>
-      <p class="muted">訪れた駅と、サイコロの出目を振り返れます。</p>
+      <p class="muted">訪れた駅と、その街で選んだ発見を振り返れます。</p>
       <div class="panel"><div class="history-item"><span class="history-index">00</span><div><strong>${crossLine() ? escapeHtml(game.routeStops[0].name) : label(game.startStationId)}</strong><small>出発駅 · ${line.id}</small></div></div>
-      ${game.visitHistory.map((v, i) => `<div class="history-item"><span class="history-index">${String(i + 1).padStart(2, "0")}</span>
-        <div><strong>${escapeHtml(v.stationName || label(v.stationId))}</strong><small>${v.isGoal ? "GOAL · " : ""}${v.lineId || game.lineId} · ${v.quests.filter(q => q.completed).length}/2 クエスト達成</small></div><em>⚄ ${v.diceValue}</em></div>`).join("")}
+      ${game.visitHistory.map((v, i) => `<div class="history-entry"><div class="history-item"><span class="history-index">${String(i + 1).padStart(2, "0")}</span>
+        <div><strong>${escapeHtml(v.stationName || label(v.stationId))}</strong><small>${v.isGoal ? "GOAL · " : ""}${v.lineId || game.lineId} · ${v.quests.filter(q => q.completed).length}/2 クエスト達成</small></div><em>⚄ ${v.diceValue}</em></div>
+        <details class="history-quests"><summary>この駅のクエストを見る</summary><ul>${v.quests.map(q => `<li class="${q.completed ? "done" : ""}"><span>${q.completed ? "✓" : "○"}</span>${escapeHtml(q.text)}</li>`).join("")}</ul></details></div>`).join("")}
       </div>`;
   }
   function sideMap() {
@@ -497,6 +515,7 @@
     if (action === "roll") roll();
     if (action === "arrive") arrive();
     if (action === "quest") toggleQuest(button.dataset.id);
+    if (action === "reroll-quests") rerollQuests();
     if (action === "next" && game?.gameState === "ARRIVED") save({ gameState: "READY_TO_ROLL" });
     if (action === "map") { mapReturnView = view; mapFocusId = crossLine() && game?.routeStops ? null : game?.lineId || null; mapFrom = game?.currentStationId ? currentName() : null; mapTo = game?.goalStationId ? goalName() : null; view = "map"; render(); }
     if (action === "map-trip" && crossLine() && game.networkJourney) {
