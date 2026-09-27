@@ -7,7 +7,7 @@ function session(seed = [], initial = null) {
   const app = {set innerHTML(v) { html = v; }, get innerHTML() { return html; }, addEventListener(type, fn) { handlers[type] = fn; }, querySelector() { return {scrollTo() {}, style: {setProperty() {}}}; }};
   const ctx = {window: {}, document: {getElementById() { return app; }}, crypto: {randomUUID: () => 'uuid', getRandomValues(a) { a[0] = seed.shift() ?? 0; return a; }}, localStorage: {getItem() { return raw; }, setItem(_, value) { raw = value; }, removeItem() { raw = null; }}, matchMedia() { return {matches: true}; }, confirm() { return true; }, Date, Math, console, encodeURIComponent};
   vm.createContext(ctx); vm.runInContext(data, ctx); vm.runInContext(map, ctx); vm.runInContext(code, ctx);
-  return {click(action, line, id, station) { handlers.click({target: {closest() { return {dataset: {action, line, id, station}, disabled: false}; }}}); }, get game() { return raw && JSON.parse(raw); }, get html() { return html; }, get raw() { return raw; }, lines: ctx.window.METRO_DATA.lines, metroMap: ctx.window.METRO_MAP};
+  return {click(action, line, id, station, mode) { handlers.click({target: {closest() { return {dataset: {action, line, id, station, mode}, disabled: false}; }}}); }, get game() { return raw && JSON.parse(raw); }, get html() { return html; }, get raw() { return raw; }, lines: ctx.window.METRO_DATA.lines, metroMap: ctx.window.METRO_MAP};
 }
 const first = session();
 assert.equal(first.lines.length, 10);
@@ -32,13 +32,16 @@ first.click('map-clear'); assert(!first.html.includes('journey-path'));
 first.click('back'); assert(first.html.includes('data-action="start"'));
 const selection = session(); selection.click('start');
 const selectionReloaded = session([], selection.raw);
-assert.equal(selectionReloaded.game.gameState, 'LINE_SELECTION');
+assert.equal(selectionReloaded.game.gameState, 'MODE_SELECTION');
 assert(selectionReloaded.html.includes('data-action="resume"'));
-selectionReloaded.click('resume'); assert(selectionReloaded.html.includes('SELECT A LINE'));
+selectionReloaded.click('resume'); assert(selectionReloaded.html.includes('CHOOSE YOUR JOURNEY'));
+selectionReloaded.click('select-mode', undefined, undefined, undefined, 'single');
+assert(selectionReloaded.html.includes('SELECT A LINE'));
 selectionReloaded.click('home'); assert(selectionReloaded.html.includes('class="shell home-shell"'));
 for (const line of first.lines) {
   const s = session([0, 2, 5, 0, 1]);
-  s.click('start'); assert(s.html.includes('data-line="' + line.id + '"'));
+  s.click('start'); s.click('select-mode', undefined, undefined, undefined, 'single');
+  assert(s.html.includes('data-line="' + line.id + '"'));
   assert(!s.html.includes('class="shell home-shell"'));
   s.click('select-line', line.id); assert.equal(s.game.lineId, line.id);
   s.click('choose-start'); assert.equal(s.game.startStationId, line.stations[0].id);
@@ -57,9 +60,43 @@ for (const line of first.lines) {
   restored.click('quest', undefined, quest);
   assert.equal(session([], restored.raw).game.visitHistory[0].quests[0].completed, true);
   const reverse = session([line.stations.length - 1, 0, 0, 0, 1]);
-  reverse.click('start'); reverse.click('select-line', line.id);
+  reverse.click('start'); reverse.click('select-mode', undefined, undefined, undefined, 'single'); reverse.click('select-line', line.id);
   reverse.click('choose-start'); reverse.click('choose-goal');
   assert.equal(reverse.game.direction, -1); reverse.click('roll');
   assert.equal(reverse.game.pendingStationId, line.stations.at(-2).id);
 }
-console.log('OK: 10 line choices, forward and reverse movement, reload, arrival and quest persistence');
+for (const line of first.lines) {
+  const s = session([0]);
+  s.click('start'); s.click('select-mode', undefined, undefined, undefined, 'network');
+  s.click('select-line', line.id); s.click('choose-start'); s.click('choose-goal');
+  assert.equal(s.game.travelMode, 'network');
+  assert.equal(s.game.networkJourney.transfers >= 1, true, line.id);
+  assert.equal(s.game.routeStops.length - 1, s.game.networkJourney.hops);
+  assert(!line.stations.some(stop => stop.name === s.game.routeStops.at(-1).name));
+  assert(s.html.includes('class="map-card network-trip"'));
+  s.click('map-trip'); assert(s.html.includes('journey-path') && s.html.includes('route-metrics'));
+  s.click('back');
+  let movedAcrossLines = false, rolls = 0;
+  while (s.game.gameState !== 'GOAL' && rolls++ < 25) {
+    if (s.game.gameState === 'ARRIVED') s.click('next');
+    const before = s.game.routeIndex;
+    s.click('roll');
+    assert.equal(s.game.routeIndex, before);
+    assert.equal(s.game.pendingIndex, Math.min(before + s.game.lastDice, s.game.routeStops.length - 1));
+    const restored = session([], s.raw);
+    assert.equal(restored.game.gameState, 'TRAVELING');
+    restored.click('resume'); assert(restored.html.includes('data-action="arrive"'));
+    s.click('arrive');
+    assert.equal(s.game.routeIndex, Math.min(before + s.game.lastDice, s.game.routeStops.length - 1));
+    const visit = s.game.visitHistory.at(-1);
+    assert.equal(visit.stationName, s.game.routeStops[s.game.routeIndex].name);
+    assert.equal(visit.quests.length, 2);
+    if (visit.lineId !== line.id) movedAcrossLines = true;
+  }
+  assert.equal(s.game.gameState, 'GOAL', line.id);
+  assert(movedAcrossLines, line.id);
+  assert.equal(s.game.routeIndex, s.game.routeStops.length - 1);
+  const finish = session([], s.raw); finish.click('resume');
+  assert(finish.html.includes('JOURNEY COMPLETE'));
+}
+console.log('OK: 10 single-line games and 10 cross-line games, transfer progression, map, reload and quests');

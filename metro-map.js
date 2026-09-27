@@ -83,11 +83,12 @@
   }
   // A route is a schematic comparison of station hops, not a timetable or fare search.
   // Among routes with the fewest hops, prefer fewer changes of line.
-  function findRoute(from, to) {
+  function findRoute(from, to, {startLineId = null} = {}) {
     if (!stationsByName.has(from) || !stationsByName.has(to) || from === to) return null;
     const key = (lineId, index) => lineId + ":" + index;
     const best = new Map(), previous = new Map(), queue = [];
     for (const lineId of stationsByName.get(from).lines) {
+      if (startLineId && lineId !== startLineId) continue;
       const index = lines.find(l => l.id === lineId).stations.findIndex(s => s.name === from);
       const node = key(lineId,index);
       best.set(node,[0,0]); queue.push({lineId,index,hops:0,transfers:0});
