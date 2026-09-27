@@ -29,6 +29,7 @@
   const station = (id) => stations[byId(id)];
   let game = null;
   let view = "game";
+  let mapReturnView = "game";
   let mapFocusId = null;
   let mapSelectedName = null;
   let mapFrom = null;
@@ -45,12 +46,14 @@
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const saved = JSON.parse(raw);
-      if (saved.schemaVersion !== 1 || !saved.gameState || !setLine(saved.lineId) ||
+      if (saved.schemaVersion !== 1 || !saved.gameState ||
+          (saved.lineId ? !setLine(saved.lineId) : saved.gameState !== "LINE_SELECTION") ||
           (saved.startStationId && byId(saved.startStationId) < 0) ||
           (saved.goalStationId && byId(saved.goalStationId) < 0) ||
           (saved.currentStationId && byId(saved.currentStationId) < 0) ||
           (saved.pendingStationId && byId(saved.pendingStationId) < 0)) throw Error("invalid save");
       game = saved;
+      view = "landing";
     }
   } catch (e) { restoreError = true; game = null; }
 
@@ -261,18 +264,8 @@
         ${s.id === game?.currentStationId ? '<span class="rail-tag">NOW</span>' : s.id === game?.goalStationId ? '<span class="rail-tag">GOAL</span>' : ""}</div>`;
     }).join("");
   }
-  function screen() {
-    if (view === "map") return { body: mapScreen(), action: '<button class="primary" data-action="back">旅の画面に戻る　→</button>' };
-    if (view === "history" && game?.startStationId) return { body: history(), action: '<button class="primary" data-action="back">旅に戻る</button>' };
-    if (lotteryPreview) return {
-      body: `<div class="fade-in"><span class="eyebrow">STATION LOTTERY</span><h2 class="screen-title">${lotteryPreview.kind === "DESTINATION" ? "ゴール駅" : "出発駅"}を抽選中</h2>
-        <div class="panel-dark" role="status"><span class="display-kicker">${lotteryPreview.kind}</span>
-        <div class="display-station ${displayStation === lotteryPreview.finalName ? "" : "reel-flash"}">${displayStation || "？？？"}</div>
-        <span class="display-code">${lineName()} · ${stations.length}駅</span><div class="display-underline"></div></div></div>`,
-      action: '<button class="primary" disabled>抽選中…</button>'
-    };
-    const state = game?.gameState || "HOME";
-    if (state === "HOME") return {
+  function homeScreen() {
+    return {
       body: `<div class="lp-home fade-in"><div class="lp-copy"><span class="lp-overline"><i></i> TOKYO METRO / ALL 9 LINES</span>
         <h2>次の駅は、<br><strong>サイコロ<br>次第。</strong></h2>
         <p class="lp-lead">行き先を決めないから、<br>出会える街がある。</p>
@@ -284,8 +277,22 @@
         <div class="lp-photo-label"><span>きまぐれメトロ旅</span><b>偶然のひと駅へ。</b></div>
         <button class="lp-map-link" data-action="map" aria-label="全路線のSVG路線図を見る"><span class="lp-map-preview" aria-hidden="true">${metroMap.overview({preview:true})}</span><span class="lp-map-bottom"><b>全9路線の路線図</b><em>見てみる ↗</em></span></button>
       </div></div>`,
-      action: '<button class="primary" data-action="start">新しい旅をはじめる　→</button>'
+      action: game ? '<button class="primary" data-action="resume">旅の続きへ　→</button>' : '<button class="primary" data-action="start">新しい旅をはじめる　→</button>'
     };
+  }
+  function screen() {
+    if (view === "landing") return homeScreen();
+    if (view === "map") return { body: mapScreen(), action: '<button class="primary" data-action="back">旅の画面に戻る　→</button>' };
+    if (view === "history" && game?.startStationId) return { body: history(), action: '<button class="primary" data-action="back">旅に戻る</button>' };
+    if (lotteryPreview) return {
+      body: `<div class="fade-in"><span class="eyebrow">STATION LOTTERY</span><h2 class="screen-title">${lotteryPreview.kind === "DESTINATION" ? "ゴール駅" : "出発駅"}を抽選中</h2>
+        <div class="panel-dark" role="status"><span class="display-kicker">${lotteryPreview.kind}</span>
+        <div class="display-station ${displayStation === lotteryPreview.finalName ? "" : "reel-flash"}">${displayStation || "？？？"}</div>
+        <span class="display-code">${lineName()} · ${stations.length}駅</span><div class="display-underline"></div></div></div>`,
+      action: '<button class="primary" disabled>抽選中…</button>'
+    };
+    const state = game?.gameState || "HOME";
+    if (state === "HOME") return homeScreen();
     if (state === "LINE_SELECTION") return {
       body: `<div class="fade-in"><span class="eyebrow">SELECT A LINE</span><h2 class="screen-title">今日は、どの路線？</h2>
         <p class="muted">東京メトロ全9路線と丸ノ内線の方南町支線。路線を選んだら、出発駅とゴールを抽選します。</p>
@@ -349,7 +356,7 @@
   function render() {
     const oldScroll = view === "map" && app.querySelector(".network-viewport") ? app.querySelector("#screen")?.scrollTop : 0;
     const s = screen();
-    const home = view === "game" && !game;
+    const home = view === "landing" || view === "game" && !game;
     const canHistory = game?.startStationId && game.visitHistory.length > 0;
     app.innerHTML = `<main class="shell${home ? " home-shell" : ""}">
       <aside class="side side-left"><div class="brand"><span class="brand-mark">M</span>きまぐれメトロ旅</div>
@@ -357,11 +364,11 @@
           <p>出発駅も、ゴールも、今日の運次第。ひと駅ずつ進むたび、街に新しい発見がある。</p></div>
         <div class="side-foot">東京メトロ全9路線で遊べます。<br>ログイン不要。進行はこの端末に保存されます。</div></aside>
       <section class="device" aria-label="旅の操作画面"><header class="app-top">
-        <div class="app-logo"><span>${game?.lineId || "METRO"}</span>きまぐれメトロ旅</div>
+        <button class="app-logo app-home-link" data-action="home" aria-label="トップページへ"><span>${game?.lineId || "METRO"}</span>きまぐれメトロ旅</button>
         <div class="header-actions"><button class="icon-btn" data-action="${view === "map" ? "back" : "map"}">${view === "map" ? "戻る" : "路線図"}</button>
         ${canHistory ? `<button class="icon-btn" data-action="${view === "history" ? "back" : "history"}">${view === "history" ? "戻る" : "記録"}</button>` : ""}</div>
         </header><div class="app-body" id="screen" tabindex="-1" aria-live="polite">${s.body}</div>
-        <footer class="action-area">${s.action}${game && !["history","map"].includes(view) ? '<button class="text-link action-sub" data-action="restart">新しい旅をはじめる</button>' : ""}</footer></section>
+        <footer class="action-area">${s.action}${game && !["history","map","landing"].includes(view) ? '<button class="text-link action-sub" data-action="restart">新しい旅をはじめる</button>' : ""}</footer></section>
       <aside class="side side-right"><div><div class="line-key"><span class="line-pill">${line.id === "Mb" ? "m" : line.id}</span><h2>${lineName()} <span class="mini-label">${stations.length}駅</span></h2></div>
         <div class="route-side" aria-label="${lineName()}全${stations.length}駅">${sideMap()}</div></div>
         <p class="side-hint">● 現在地　● ゴール<br>途中でページを閉じても、次回続きから再開できます。</p></aside>
@@ -382,6 +389,8 @@
     if (!button || button.disabled) return;
     const action = button.dataset.action;
     if (action === "start") { saveNew(); return; }
+    if (action === "home") { view = game ? "landing" : "game"; render(); app.querySelector("#screen")?.scrollTo(0,0); return; }
+    if (action === "resume" && game) { view = "game"; render(); return; }
     if (action === "restart") {
       if (game && game.gameState !== "GOAL" && !confirm("進行中の旅を消して、新しい旅を始めますか？")) return;
       start(); return;
@@ -394,7 +403,7 @@
     if (action === "arrive") arrive();
     if (action === "quest") toggleQuest(button.dataset.id);
     if (action === "next" && game?.gameState === "ARRIVED") save({ gameState: "READY_TO_ROLL" });
-    if (action === "map") { mapFocusId = game?.lineId || null; mapFrom = game?.currentStationId ? station(game.currentStationId)?.name : null; mapTo = game?.goalStationId ? station(game.goalStationId)?.name : null; view = "map"; render(); }
+    if (action === "map") { mapReturnView = view; mapFocusId = game?.lineId || null; mapFrom = game?.currentStationId ? station(game.currentStationId)?.name : null; mapTo = game?.goalStationId ? station(game.goalStationId)?.name : null; view = "map"; render(); }
     if (action === "map-line" && view === "map") { mapFocusId = button.dataset.line === "all" ? null : button.dataset.line; render(); }
     if (action === "map-station" && view === "map" && metroMap.stations.has(button.dataset.station)) { mapSelectedName = button.dataset.station; mapSearchQuery = ""; render(); }
     if (action === "map-from" && view === "map") { mapFrom = button.dataset.station; render(); }
@@ -404,7 +413,7 @@
     if (action === "map-zoom-in" && view === "map") { mapZoom = Math.min(1.6,Math.round((mapZoom+.3)*10)/10); render(); }
     if (action === "map-zoom-out" && view === "map") { mapZoom = Math.max(.7,Math.round((mapZoom-.3)*10)/10); render(); }
     if (action === "history" && game) { view = "history"; render(); }
-    if (action === "back") { view = "game"; render(); }
+    if (action === "back") { view = view === "map" ? mapReturnView : "game"; render(); }
     if (["select-line","choose-start","choose-goal","roll","arrive","next","history","back","map"].includes(action))
       app.querySelector("#screen")?.scrollTo(0, 0);
   });

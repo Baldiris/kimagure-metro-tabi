@@ -30,6 +30,12 @@ assert(first.metroMap.findRoute('新木場','北綾瀬').transfers > 0);
 first.click('map-swap'); assert(first.html.includes('<strong>浅草</strong>'));
 first.click('map-clear'); assert(!first.html.includes('journey-path'));
 first.click('back'); assert(first.html.includes('data-action="start"'));
+const selection = session(); selection.click('start');
+const selectionReloaded = session([], selection.raw);
+assert.equal(selectionReloaded.game.gameState, 'LINE_SELECTION');
+assert(selectionReloaded.html.includes('data-action="resume"'));
+selectionReloaded.click('resume'); assert(selectionReloaded.html.includes('SELECT A LINE'));
+selectionReloaded.click('home'); assert(selectionReloaded.html.includes('class="shell home-shell"'));
 for (const line of first.lines) {
   const s = session([0, 2, 5, 0, 1]);
   s.click('start'); assert(s.html.includes('data-line="' + line.id + '"'));
@@ -43,6 +49,8 @@ for (const line of first.lines) {
   s.click('roll'); assert.equal(s.game.currentStationId, line.stations[0].id);
   assert.equal(s.game.pendingStationId, line.stations[3].id);
   const restored = session([], s.raw); assert.equal(restored.game.lineId, line.id);
+  assert(restored.html.includes('data-action="resume"'));
+  restored.click('resume'); assert(restored.html.includes('data-action="arrive"'));
   restored.click('arrive'); assert.equal(restored.game.gameState, 'GOAL');
   assert.equal(restored.game.visitHistory[0].quests.length, 2);
   const quest = restored.game.visitHistory[0].quests[0].id;
