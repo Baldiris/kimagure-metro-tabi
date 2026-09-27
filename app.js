@@ -273,15 +273,17 @@
     };
     const state = game?.gameState || "HOME";
     if (state === "HOME") return {
-      body: `<div class="fade-in"><span class="eyebrow">TOKYO METRO / ALL LINES</span><h2 class="screen-title">次の駅は、<br>サイコロ次第。</h2>
-        <p class="muted">東京メトロ全9路線から、今日の旅を選ぼう。出発駅とゴールは運次第。</p>
-        <button class="hero-map hero-art" data-action="map" aria-label="全路線のSVG路線図を見る">
-          <img class="hero-art-photo" src="./metro-hero-v2.webp" alt="" width="1280" height="801" decoding="async">
-          <span class="hero-art-kicker" aria-hidden="true">TOKYO METRO / 9 LINES</span>
-          <span class="hero-art-map" aria-hidden="true">${metroMap.overview({preview:true})}</span>
-          <span class="hero-art-link" aria-hidden="true">路線図を見る <b>↗</b></span></button>
-        <div class="feature-steps"><div><b>01</b>駅を抽選</div><div><b>02</b>サイコロで進む</div><div><b>03</b>街を発見</div></div>
-        ${restoreError ? '<p class="error">保存された旅を読み込めませんでした。新しい旅を始められます。</p>' : ""}</div>`,
+      body: `<div class="lp-home fade-in"><div class="lp-copy"><span class="lp-overline"><i></i> TOKYO METRO / ALL 9 LINES</span>
+        <h2>次の駅は、<br><strong>サイコロ<br>次第。</strong></h2>
+        <p class="lp-lead">行き先を決めないから、<br>出会える街がある。</p>
+        <p class="lp-description">路線を選んで駅を抽選。サイコロを振るたび、いつもの東京が少し違って見えてくる。</p>
+        <div class="lp-journey-steps"><div><span>01 / CHOOSE</span><b>路線を選ぶ</b></div><div><span>02 / ROLL</span><b>サイコロで進む</b></div><div><span>03 / EXPLORE</span><b>駅で街を発見</b></div></div>
+        ${restoreError ? '<p class="error">保存された旅を読み込めませんでした。新しい旅を始められます。</p>' : ""}
+      </div><div class="lp-visual">
+        <img src="./metro-hero-v2.webp" alt="地下鉄ホームに入る列車と琥珀色のサイコロ" width="1280" height="801" decoding="async">
+        <div class="lp-photo-label"><span>きまぐれメトロ旅</span><b>偶然のひと駅へ。</b></div>
+        <button class="lp-map-link" data-action="map" aria-label="全路線のSVG路線図を見る"><span class="lp-map-preview" aria-hidden="true">${metroMap.overview({preview:true})}</span><span class="lp-map-bottom"><b>全9路線の路線図</b><em>見てみる ↗</em></span></button>
+      </div></div>`,
       action: '<button class="primary" data-action="start">新しい旅をはじめる　→</button>'
     };
     if (state === "LINE_SELECTION") return {
@@ -347,8 +349,9 @@
   function render() {
     const oldScroll = view === "map" && app.querySelector(".network-viewport") ? app.querySelector("#screen")?.scrollTop : 0;
     const s = screen();
+    const home = view === "game" && !game;
     const canHistory = game?.startStationId && game.visitHistory.length > 0;
-    app.innerHTML = `<main class="shell">
+    app.innerHTML = `<main class="shell${home ? " home-shell" : ""}">
       <aside class="side side-left"><div class="brand"><span class="brand-mark">M</span>きまぐれメトロ旅</div>
         <div><span class="side-kicker">A SMALL TRIP, BY CHANCE</span><h1>次の駅は、<br><strong>サイコロ次第。</strong></h1>
           <p>出発駅も、ゴールも、今日の運次第。ひと駅ずつ進むたび、街に新しい発見がある。</p></div>

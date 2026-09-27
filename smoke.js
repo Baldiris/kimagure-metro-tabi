@@ -12,6 +12,7 @@ function session(seed = [], initial = null) {
 const first = session();
 assert.equal(first.lines.length, 10);
 assert.equal(new Set(first.lines.map(line => line.id)).size, 10);
+assert(first.html.includes('class="shell home-shell"'));
 assert(first.html.includes('class="network-svg is-preview"'));
 assert(first.html.includes('src="./metro-hero-v2.webp"'));
 first.click('map'); assert(first.html.includes('class="network-viewport"'));
@@ -32,6 +33,7 @@ first.click('back'); assert(first.html.includes('data-action="start"'));
 for (const line of first.lines) {
   const s = session([0, 2, 5, 0, 1]);
   s.click('start'); assert(s.html.includes('data-line="' + line.id + '"'));
+  assert(!s.html.includes('class="shell home-shell"'));
   s.click('select-line', line.id); assert.equal(s.game.lineId, line.id);
   s.click('choose-start'); assert.equal(s.game.startStationId, line.stations[0].id);
   s.click('choose-goal'); assert.equal(s.game.goalStationId, line.stations[3].id);
