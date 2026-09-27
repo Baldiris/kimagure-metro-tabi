@@ -332,6 +332,7 @@
       </div>`;
   }
   function sideMap() {
+    if (!game?.lineId) return '<p class="route-note">出発路線を選ぶと、駅の並びがここに表示されます。</p>';
     if (crossLine() && game.routeStops) return game.routeStops.map((s,i) => {
       const transfer = i < game.routeStops.length-1 && s.lineId !== game.routeStops[i+1].lineId;
       return `<div class="rail-station ${i === game.routeIndex ? "current" : ""} ${i === game.routeStops.length-1 ? "goal" : ""} ${i < game.routeIndex ? "past" : ""}" style="--station-color:${lineById(s.lineId).color}">
@@ -351,7 +352,7 @@
       body: `<div class="lp-home fade-in"><div class="lp-copy"><span class="lp-overline"><i></i> TOKYO METRO / ALL 9 LINES</span>
         <h2>次の駅は、<br><strong>サイコロ<br>次第。</strong></h2>
         <p class="lp-lead">行き先を決めないから、<br>出会える街がある。</p>
-        <p class="lp-description">1路線をじっくり、または乗換を重ねて全路線へ。サイコロを振るたび、いつもの東京が少し違って見えてくる。</p>
+        <p class="lp-description">1路線をじっくり、または乗換を重ねて別の路線へ。サイコロを振るたび、いつもの東京が少し違って見えてくる。</p>
         <div class="lp-journey-steps"><div><span>01 / CHOOSE</span><b>路線を選ぶ</b></div><div><span>02 / ROLL</span><b>サイコロで進む</b></div><div><span>03 / EXPLORE</span><b>駅で街を発見</b></div></div>
         ${restoreError ? '<p class="error">保存された旅を読み込めませんでした。新しい旅を始められます。</p>' : ""}
       </div><div class="lp-visual">
@@ -461,8 +462,8 @@
         ${canHistory ? `<button class="icon-btn" data-action="${view === "history" ? "back" : "history"}">${view === "history" ? "戻る" : "記録"}</button>` : ""}</div>
         </header><div class="app-body" id="screen" tabindex="-1" aria-live="polite">${s.body}</div>
         <footer class="action-area">${s.action}${game && !["history","map","landing"].includes(view) ? '<button class="text-link action-sub" data-action="restart">新しい旅をはじめる</button>' : ""}</footer></section>
-      <aside class="side side-right"><div><div class="line-key"><span class="line-pill">${crossLine() ? "↗" : line.id === "Mb" ? "m" : line.id}</span><h2>${crossLine() ? "路線横断の旅" : lineName()} <span class="mini-label">${crossLine() && game.routeStops ? game.networkJourney.hops + "駅 · 乗換" + game.networkJourney.transfers + "回" : stations.length + "駅"}</span></h2></div>
-        <div class="route-side" aria-label="${crossLine() && game.routeStops ? "乗換を含む旅の経路" : lineName() + "全" + stations.length + "駅"}">${sideMap()}</div></div>
+      <aside class="side side-right"><div><div class="line-key"><span class="line-pill">${!game?.lineId ? "?" : crossLine() && game.routeStops ? "↗" : line.id === "Mb" ? "m" : line.id}</span><h2>${!game?.lineId ? "旅の準備" : crossLine() && game.routeStops ? "路線横断の旅" : lineName()} <span class="mini-label">${!game?.lineId ? "路線を選択" : crossLine() && game.routeStops ? game.networkJourney.hops + "駅 · 乗換" + game.networkJourney.transfers + "回" : stations.length + "駅"}</span></h2></div>
+        <div class="route-side" aria-label="${!game?.lineId ? "出発路線を選択" : crossLine() && game.routeStops ? "乗換を含む旅の経路" : lineName() + "全" + stations.length + "駅"}">${sideMap()}</div></div>
         <p class="side-hint">● 現在地　● ゴール<br>途中でページを閉じても、次回続きから再開できます。</p></aside>
     </main>`;
     app.querySelector(".shell").style.setProperty("--line-color", crossLine() ? "#238f73" : line.color);
