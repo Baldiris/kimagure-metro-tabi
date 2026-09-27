@@ -13,6 +13,7 @@ const first = session();
 assert.equal(first.lines.length, 10);
 assert.equal(new Set(first.lines.map(line => line.id)).size, 10);
 assert(first.html.includes('class="network-svg is-preview"'));
+assert(first.html.includes('src="./metro-hero-v2.webp"'));
 first.click('map'); assert(first.html.includes('class="network-viewport"'));
 first.click('map-line', 'H'); assert(first.html.includes('data-route="H"'));
 first.click('map-station', undefined, undefined, '渋谷'); assert(first.html.includes('SELECTED STATION'));
