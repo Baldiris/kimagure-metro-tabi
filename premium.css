@@ -175,6 +175,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{
 .network-viewport{border-color:#d9d0bc;background:#f9f6ec}
 .map-shell{grid-template-columns:minmax(260px,350px) minmax(0,1fr)}
 .map-shell .side-right{display:none}
+.map-shell .side-left h1{font-size:clamp(1.95rem,2.35vw,2.55rem);letter-spacing:-.1em}
 .map-shell .device{border-radius:0 17px 17px 0}
 .map-shell .app-body{padding-inline:clamp(29px,4vw,62px)}
 .map-shell .action-area{padding-inline:clamp(29px,4vw,62px)}
