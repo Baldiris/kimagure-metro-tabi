@@ -469,7 +469,7 @@
     const s = screen();
     const home = view === "landing" || view === "game" && !game;
     const canHistory = game?.startStationId && game.visitHistory.length > 0;
-    app.innerHTML = `<main class="shell${home ? " home-shell" : ""}">
+    app.innerHTML = `<main class="shell${home ? " home-shell" : view === "map" ? " map-shell" : ""}">
       <aside class="side side-left"><div class="brand"><span class="brand-mark">M</span>きまぐれメトロ旅</div>
         <div><span class="side-kicker">A SMALL TRIP, BY CHANCE</span><h1>次の駅は、<br><strong>サイコロ次第。</strong></h1>
           <p>出発駅も、ゴールも、今日の運次第。ひと駅ずつ進むたび、街に新しい発見がある。</p></div>
@@ -484,7 +484,7 @@
         <div class="route-side" aria-label="${!game?.lineId ? "出発路線を選択" : crossLine() && game.routeStops ? "乗換を含む旅の経路" : lineName() + "全" + stations.length + "駅"}">${sideMap()}</div></div>
         <p class="side-hint">● 現在地　● ゴール<br>途中でページを閉じても、次回続きから再開できます。</p></aside>
     </main>`;
-    app.querySelector(".shell").style.setProperty("--line-color", crossLine() ? "#238f73" : line.color);
+    app.querySelector(".shell").style.setProperty("--line-color", crossLine() && game?.routeStops ? "#238f73" : line.color);
     if (oldScroll) app.querySelector("#screen").scrollTop = oldScroll;
     const viewport = app.querySelector(".network-viewport");
     if (viewport && Number.isFinite(viewport.scrollWidth)) {
