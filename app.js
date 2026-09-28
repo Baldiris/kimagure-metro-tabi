@@ -374,7 +374,7 @@
         <div class="lp-journey-steps"><div><span>01 / CHOOSE</span><b>路線を選ぶ</b></div><div><span>02 / ROLL</span><b>サイコロで進む</b></div><div><span>03 / EXPLORE</span><b>駅で街を発見</b></div></div>
         ${restoreError ? '<p class="error">保存された旅を読み込めませんでした。新しい旅を始められます。</p>' : ""}
       </div><div class="lp-visual">
-        <img src="./metro-hero-v2.webp" alt="地下鉄ホームに入る列車と琥珀色のサイコロ" width="1280" height="801" decoding="async">
+        <img src="./metro-hero-premium.webp" alt="深緑の地下鉄ホームに入る列車と琥珀色のサイコロ" width="1586" height="992" decoding="async">
         <div class="lp-photo-label"><span>きまぐれメトロ旅</span><b>偶然のひと駅へ。</b></div>
         <button class="lp-map-link" data-action="map" aria-label="全路線のSVG路線図を見る"><span class="lp-map-preview" aria-hidden="true">${metroMap.overview({preview:true})}</span><span class="lp-map-bottom"><b>全9路線の路線図</b><em>見てみる ↗</em></span></button>
       </div></div>`,

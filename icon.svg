@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="きまぐれメトロ旅">
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#0a2422"/><stop offset="1" stop-color="#1b4940"/></linearGradient>
+    <linearGradient id="gold" x2="1" y2="1"><stop stop-color="#f0ce8a"/><stop offset=".52" stop-color="#b5823d"/><stop offset="1" stop-color="#e5b96e"/></linearGradient>
+    <linearGradient id="ivory" x2="1" y2="1"><stop stop-color="#fffdf6"/><stop offset="1" stop-color="#e8dec9"/></linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect x="18" y="18" width="476" height="476" rx="98" fill="none" stroke="#ffffff" stroke-opacity=".13" stroke-width="2"/>
+  <path d="M82 353C136 353 136 130 252 130S334 382 430 234" fill="none" stroke="url(#gold)" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="82" cy="353" r="15" fill="#f5d69b" stroke="#102f2a" stroke-width="8"/>
+  <circle cx="430" cy="234" r="15" fill="#f5d69b" stroke="#102f2a" stroke-width="8"/>
+  <g transform="rotate(-10 256 267)">
+    <rect x="170" y="181" width="172" height="172" rx="35" fill="#071c1a" opacity=".35" transform="translate(5 11)"/>
+    <rect x="170" y="181" width="172" height="172" rx="35" fill="url(#ivory)" stroke="#f9e8bc" stroke-width="6"/>
+    <circle cx="216" cy="226" r="12" fill="#153b34"/>
+    <circle cx="296" cy="226" r="12" fill="#153b34"/>
+    <circle cx="256" cy="267" r="12" fill="#153b34"/>
+    <circle cx="216" cy="307" r="12" fill="#153b34"/>
+    <circle cx="296" cy="307" r="12" fill="#153b34"/>
+  </g>
+</svg>
