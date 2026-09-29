@@ -240,6 +240,13 @@ body{background:#e5ebe4}
     padding:14px 20px 18px;background:linear-gradient(#f7f3eb00,#f7f3eb 25%,#f7f3eb 100%);
   }
   .game-shell .action-area .primary,.map-shell .action-area .primary{min-height:57px}
+  .map-shell .map-filters{
+    flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;
+    margin:14px -20px 18px;padding:2px 20px 9px;
+    scroll-snap-type:x proximity;
+  }
+  .map-shell .map-filters::-webkit-scrollbar{display:none}
+  .map-shell .map-chip{flex:none;scroll-snap-align:start}
   .reel-machine{margin:20px 0}
   .reel-window{min-height:163px}
   .reel-window .display-station{font-size:clamp(1.85rem,8vw,2.75rem)}
@@ -275,10 +282,7 @@ body{background:#e5ebe4}
   .home-shell .lp-lead{font:600 1.07rem/1.65 var(--premium-serif);color:#fff6e6}
   .home-shell .lp-description{font-size:.75rem;line-height:1.8;color:#dce9df;max-width:290px}
   .home-shell .lp-journey-steps,.home-shell .lp-photo-label,.home-shell .lp-map-link{display:none}
-  .home-shell .lp-live-card{
-    left:25px;right:25px;bottom:180px;width:auto;min-width:0;
-    background:#092820cf;padding:13px 15px;
-  }
+  .home-shell .lp-live-card{display:none}
   .home-shell .action-area{
     background:linear-gradient(#071e1b00,#071e1bc9 35%,#071e1bf5);
   }

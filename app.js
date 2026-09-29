@@ -598,7 +598,7 @@
         <button class="icon-btn" data-action="${view === "collection" ? "back" : "collection"}">${view === "collection" ? "戻る" : "駅図鑑"}</button>
         ${canHistory ? `<button class="icon-btn" data-action="${view === "history" ? "back" : "history"}">${view === "history" ? "戻る" : "記録"}</button>` : ""}</div>
         </header><div class="app-body" id="screen" tabindex="-1" aria-live="polite">${s.body}</div>
-        <footer class="action-area">${s.action}${view === "game" && ["READY_TO_ROLL","TRAVELING","ARRIVED"].includes(game?.gameState) ? '<button class="text-link action-sub" data-action="restart">新しい旅をはじめる</button>' : ""}</footer>
+        <footer class="action-area">${s.action}${!lotteryPreview && view === "game" && ["READY_TO_ROLL","TRAVELING","ARRIVED"].includes(game?.gameState) ? '<button class="text-link action-sub" data-action="restart">新しい旅をはじめる</button>' : ""}</footer>
         <nav class="mobile-nav" aria-label="主要メニュー">
           <button data-action="home" ${home ? 'aria-current="page"' : ""}>${navIcons.home}<span>ホーム</span></button>
           <button data-action="${game ? "resume" : "start"}" ${view === "game" && game ? 'aria-current="page"' : ""}>${navIcons.trip}<span>旅</span></button>
