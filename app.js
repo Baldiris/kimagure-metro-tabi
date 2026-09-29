@@ -460,6 +460,11 @@
     }).join("");
   }
   function homeScreen() {
+    const discovered = Object.keys(collection.visits).filter(name => metroMap.stations.has(name)).length;
+    const tripStatus = game?.goalStationId ? game.gameState === "GOAL"
+      ? `前回の旅　${escapeHtml(goalName())} に到着`
+      : `旅の続き　${escapeHtml(currentName())} → ${escapeHtml(goalName())}`
+      : "東京メトロ全9路線から、偶然のひと駅へ";
     return {
       body: `<div class="lp-home fade-in"><div class="lp-copy"><span class="lp-overline"><i></i> TOKYO METRO / ALL 9 LINES</span>
         <h2>次の駅は、<br><strong>サイコロ<br>次第。</strong></h2>
@@ -470,6 +475,7 @@
       </div><div class="lp-visual">
         <img src="./metro-hero-premium.webp" alt="深緑の地下鉄ホームに入る列車と琥珀色のサイコロ" width="1586" height="992" decoding="async">
         <div class="lp-photo-label"><span>きまぐれメトロ旅</span><b>偶然のひと駅へ。</b></div>
+        <div class="lp-live-card"><span class="lp-live-light" aria-hidden="true"></span><span>${tripStatus}</span><b>${discovered} / 144 <small>駅発見</small></b></div>
         <button class="lp-map-link" data-action="map" aria-label="全路線のSVG路線図を見る"><span class="lp-map-preview" aria-hidden="true">${metroMap.overview({preview:true})}</span><span class="lp-map-bottom"><b>全9路線の路線図</b><em>見てみる ↗</em></span></button>
       </div></div>`,
       action: game ? '<button class="primary" data-action="resume">旅の続きへ　→</button>' : '<button class="primary" data-action="start">新しい旅をはじめる　→</button>'
@@ -482,9 +488,9 @@
     if (view === "history" && game?.startStationId) return { body: history(), action: `<button class="primary" data-action="back">${historyReturnView === "collection" ? "駅図鑑に戻る" : "旅に戻る"}　→</button>` };
     if (lotteryPreview) return {
       body: `<div class="fade-in"><span class="eyebrow">STATION LOTTERY</span><h2 class="screen-title">${lotteryPreview.kind === "DESTINATION" ? "ゴール駅" : "出発駅"}を抽選中</h2>
-        <div class="panel-dark" role="status"><span class="display-kicker">${lotteryPreview.kind}</span>
-        <div class="display-station ${displayStation === lotteryPreview.finalName ? "" : "reel-flash"}">${displayStation || "？？？"}</div>
-        <span class="display-code">${crossLine() && lotteryPreview.kind === "DESTINATION" ? "ALL 9 LINES" : lineName() + " · " + stations.length + "駅"}</span><div class="display-underline"></div></div></div>`,
+        <div class="reel-machine is-spinning" role="status"><div class="reel-head"><span class="reel-led" aria-hidden="true"></span><span>${lotteryPreview.kind}</span><small>STATION SELECTOR</small></div>
+        <div class="reel-window"><span class="reel-ghost" aria-hidden="true">············</span><div class="display-station ${displayStation === lotteryPreview.finalName ? "" : "reel-flash"}">${escapeHtml(displayStation || "？？？")}</div><span class="reel-ghost" aria-hidden="true">············</span></div>
+        <div class="reel-foot"><span>${crossLine() && lotteryPreview.kind === "DESTINATION" ? "ALL 9 LINES" : lineName() + " · " + stations.length + "駅"}</span><span>✦</span></div></div></div>`,
       action: '<button class="primary" disabled>抽選中…</button>'
     };
     const state = game?.gameState || "HOME";
@@ -511,9 +517,9 @@
         body: `<div class="fade-in"><span class="eyebrow">STEP ${isStart ? "01" : "02"} / 02</span>
           <h2 class="screen-title">${isStart ? "出発駅を決めよう" : "ゴール駅を決めよう"}</h2>
           <p class="muted">${isStart ? lineName() + stations.length + "駅から抽選するか、今いる駅を選べます。" : "出発駅は " + label(game.startStationId) + "。旅の長さを選んで" + (crossLine() ? "別の路線の" : "") + "ゴールを抽選します。"}</p>
-          <div class="panel-dark"><span class="display-kicker">${isStart ? "START STATION" : "DESTINATION"}</span>
-            <div class="display-station ${busy ? "reel-flash" : ""}">${displayStation || (isStart ? "？？？" : "？？？")}</div>
-            <span class="display-code">${crossLine() && !isStart ? "ALL 9 LINES / TRANSFER ROUTE" : lineName() + " · " + stations.length + "駅"}</span><div class="display-underline"></div></div>
+          <div class="reel-machine"><div class="reel-head"><span class="reel-led" aria-hidden="true"></span><span>${isStart ? "START STATION" : "DESTINATION"}</span><small>STATION SELECTOR</small></div>
+            <div class="reel-window"><span class="reel-ghost" aria-hidden="true">············</span><div class="display-station">？？？</div><span class="reel-ghost" aria-hidden="true">············</span></div>
+            <div class="reel-foot"><span>${crossLine() && !isStart ? "ALL 9 LINES / TRANSFER ROUTE" : lineName() + " · " + stations.length + "駅"}</span><span>✦</span></div></div>
           ${isStart ? `<details class="start-picker"><summary><span><b>今いる駅から始める</b><small>実際の出発駅を選択</small></span><span aria-hidden="true">＋</span></summary>
             <div class="start-station-list">${stations.map(s => `<button data-action="set-start" data-station="${s.id}"><small>${s.id}</small>${escapeHtml(s.name)}<span aria-hidden="true">→</span></button>`).join("")}</div></details>` :
             `<fieldset class="trip-distance"><legend>旅の長さを選ぶ</legend><div class="distance-options">
@@ -526,14 +532,15 @@
     }
     if (state === "READY_TO_ROLL") return {
       body: `<div class="fade-in"><span class="eyebrow">THE JOURNEY</span><h2 class="screen-title">次は、どこまで？</h2>
-        <div class="trip-summary"><div class="trip-end"><span class="mini-label">現在地</span><strong>${escapeHtml(currentName())}</strong></div>
-          <span class="trip-arrow">→</span><div class="trip-end"><span class="mini-label">GOAL</span><strong>${escapeHtml(goalName())}</strong></div></div>
-        ${crossLine() ? `<div class="route-metrics trip-metrics"><span><b>${game.networkJourney.hops}</b>駅のルート</span><span><b>${game.networkJourney.transfers}</b>回乗換</span></div>` : ""}
-        <div class="metric"><strong>${remaining()}</strong><span>駅でゴール</span></div>
-        <div class="progress-track" role="progressbar" aria-valuenow="${pct()}" aria-valuemin="0" aria-valuemax="100" aria-label="旅の進行"><span style="width:${pct()}%"></span></div>
-        <div class="dice-stage"><span class="dice-glyph" aria-hidden="true">⚄</span></div>
+        <section class="journey-board" aria-label="現在の旅"><div class="board-top"><span class="board-line"><i style="background:${line.color}"></i>${crossLine() ? "路線横断の旅" : lineName()}</span><span>TRIP / ${String(game.visitHistory.length+1).padStart(2,"0")}</span></div>
+          <div class="trip-summary"><div class="trip-end"><span class="mini-label">現在地 / NOW</span><strong>${escapeHtml(currentName())}</strong></div>
+          <span class="trip-arrow" aria-hidden="true">→</span><div class="trip-end"><span class="mini-label">行き先 / GOAL</span><strong>${escapeHtml(goalName())}</strong></div></div>
+          <div class="board-progress"><div class="metric"><strong>${remaining()}</strong><span>駅でゴール</span></div><span class="board-pct">${pct()}%</span></div>
+          <div class="progress-track" role="progressbar" aria-valuenow="${pct()}" aria-valuemin="0" aria-valuemax="100" aria-label="旅の進行"><span style="width:${pct()}%"></span></div>
+          ${crossLine() ? `<div class="board-transfers">${game.networkJourney.hops}駅のルート · 乗換${game.networkJourney.transfers}回</div>` : ""}</section>
+        <div class="dice-stage"><span class="dice-halo" aria-hidden="true"></span><span class="dice-glyph" aria-hidden="true">⚄</span><span class="dice-caption">ROLL THE DICE</span></div>
         ${miniMap()}<p class="route-note">サイコロを振ると、${crossLine() ? "保存したルートを駅数ぶん進みます。乗換は駅数に含みません" : "ゴール方向へ進みます"}。ゴールを越える目ならゴールで止まります。</p></div>`,
-      action: '<button class="primary" data-action="roll">サイコロを振る　→</button>'
+      action: '<button class="primary" data-action="roll"><span class="button-die" aria-hidden="true">⚄</span> サイコロを振る <span aria-hidden="true">→</span></button>'
     };
     if (state === "TRAVELING") return {
       body: `<div class="fade-in"><span class="eyebrow">NEXT STOP / ${game.pendingStationId}</span>
@@ -571,7 +578,13 @@
     const s = screen();
     const home = view === "landing" || view === "game" && !game;
     const canHistory = game?.startStationId && game.visitHistory.length > 0;
-    app.innerHTML = `<main class="shell${home ? " home-shell" : view === "map" ? " map-shell" : ""}">
+    const navIcons = {
+      home:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-7h6v7"/></svg>',
+      trip:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r=".8"/><circle cx="16" cy="8" r=".8"/><circle cx="12" cy="12" r=".8"/><circle cx="8" cy="16" r=".8"/><circle cx="16" cy="16" r=".8"/></svg>',
+      map:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15m6-12v15"/></svg>',
+      atlas:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12a2 2 0 0 1 2 2v16H7a3 3 0 0 1-3-3V4a1 1 0 0 1 1-1zM7 21a3 3 0 0 1 0-6h12"/><path d="m11 8 1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/></svg>'
+    };
+    app.innerHTML = `<main class="shell ${home ? "home-shell" : view === "map" ? "map-shell" : "game-shell"}">
       <aside class="side side-left"><div class="brand"><span class="brand-mark">M</span>きまぐれメトロ旅</div>
         <div><span class="side-kicker">A SMALL TRIP, BY CHANCE</span><h1>次の駅は、<br><strong>サイコロ次第。</strong></h1>
           <p>今いる駅からでも、抽選からでも。ひと駅ずつ進むたび、街に新しい発見がある。</p></div>
@@ -582,7 +595,13 @@
         <button class="icon-btn" data-action="${view === "collection" ? "back" : "collection"}">${view === "collection" ? "戻る" : "駅図鑑"}</button>
         ${canHistory ? `<button class="icon-btn" data-action="${view === "history" ? "back" : "history"}">${view === "history" ? "戻る" : "記録"}</button>` : ""}</div>
         </header><div class="app-body" id="screen" tabindex="-1" aria-live="polite">${s.body}</div>
-        <footer class="action-area">${s.action}${game && game.gameState !== "GOAL" && !["history","map","landing","collection"].includes(view) ? '<button class="text-link action-sub" data-action="restart">新しい旅をはじめる</button>' : ""}</footer></section>
+        <footer class="action-area">${s.action}${game && game.gameState !== "GOAL" && !["history","map","landing","collection"].includes(view) ? '<button class="text-link action-sub" data-action="restart">新しい旅をはじめる</button>' : ""}</footer>
+        <nav class="mobile-nav" aria-label="主要メニュー">
+          <button data-action="home" ${home ? 'aria-current="page"' : ""}>${navIcons.home}<span>ホーム</span></button>
+          <button data-action="${game ? "resume" : "start"}" ${view === "game" && game ? 'aria-current="page"' : ""}>${navIcons.trip}<span>旅</span></button>
+          <button data-action="${view === "map" ? "noop" : "map"}" ${view === "map" ? 'aria-current="page"' : ""}>${navIcons.map}<span>路線図</span></button>
+          <button data-action="${view === "collection" ? "noop" : "collection"}" ${view === "collection" ? 'aria-current="page"' : ""}>${navIcons.atlas}<span>駅図鑑</span></button>
+        </nav></section>
       <aside class="side side-right"><div><div class="line-key"><span class="line-pill">${!game?.lineId ? "?" : crossLine() && game.routeStops ? "↗" : line.id === "Mb" ? "m" : line.id}</span><h2>${!game?.lineId ? "旅の準備" : crossLine() && game.routeStops ? "路線横断の旅" : lineName()} <span class="mini-label">${!game?.lineId ? "路線を選択" : crossLine() && game.routeStops ? game.networkJourney.hops + "駅 · 乗換" + game.networkJourney.transfers + "回" : stations.length + "駅"}</span></h2></div>
         <div class="route-side" aria-label="${!game?.lineId ? "出発路線を選択" : crossLine() && game.routeStops ? "乗換を含む旅の経路" : lineName() + "全" + stations.length + "駅"}">${sideMap()}</div></div>
         <p class="side-hint">● 現在地　● ゴール<br>途中でページを閉じても、次回続きから再開できます。</p></aside>
