@@ -444,6 +444,7 @@
       </div>`;
   }
   function sideMap() {
+    if (lotteryPreview) return '<div class="rail-wait"><span class="rail-wait-symbol" aria-hidden="true">✦</span><b>駅を選んでいます</b><p>行き先が決まるまで、もう少し。</p></div>';
     if (!game?.lineId) return '<p class="route-note">出発路線を選ぶと、駅の並びがここに表示されます。</p>';
     if (crossLine() && game.routeStops) return game.routeStops.map((s,i) => {
       const transfer = i < game.routeStops.length-1 && s.lineId !== game.routeStops[i+1].lineId;
@@ -475,7 +476,7 @@
       </div><div class="lp-visual">
         <img src="./metro-hero-premium.webp" alt="深緑の地下鉄ホームに入る列車と琥珀色のサイコロ" width="1586" height="992" decoding="async">
         <div class="lp-photo-label"><span>きまぐれメトロ旅</span><b>偶然のひと駅へ。</b></div>
-        <div class="lp-live-card"><span class="lp-live-light" aria-hidden="true"></span><span>${tripStatus}</span><b>${discovered} / 144 <small>駅発見</small></b></div>
+        <div class="lp-live-card"><span class="lp-live-light" aria-hidden="true"></span><span>${tripStatus}</span><b>${discovered} / ${metroMap.stations.size} <small>駅発見</small></b></div>
         <button class="lp-map-link" data-action="map" aria-label="全路線のSVG路線図を見る"><span class="lp-map-preview" aria-hidden="true">${metroMap.overview({preview:true})}</span><span class="lp-map-bottom"><b>全9路線の路線図</b><em>見てみる ↗</em></span></button>
       </div></div>`,
       action: game ? '<button class="primary" data-action="resume">旅の続きへ　→</button>' : '<button class="primary" data-action="start">新しい旅をはじめる　→</button>'
@@ -564,7 +565,8 @@
     if (state === "GOAL") return {
       body: `<div class="fade-in"><span class="eyebrow">JOURNEY COMPLETE</span><div class="celebrate">
         <span class="mini-label" style="color:#f7b951">GOAL / ${game.goalStationId}</span><div class="big">${escapeHtml(goalName())}</div>
-        <p>${escapeHtml(crossLine() ? game.routeStops[0].name : label(game.startStationId))}から ${game.visitHistory.length} 回の到着。<br>今日だけの旅ができました。</p></div>
+        <p>${escapeHtml(crossLine() ? game.routeStops[0].name : label(game.startStationId))}から ${game.visitHistory.length} 回の到着。<br>今日だけの旅ができました。</p>
+        <div class="goal-stamp"><span>${collection.visits[goalName()]?.count === 1 ? "新しい駅を発見" : "駅図鑑に記録"}</span><strong>${Object.keys(collection.visits).filter(name => metroMap.stations.has(name)).length}<small> / ${metroMap.stations.size} 駅</small></strong></div></div>
         ${questList()}<div class="list-head"><h3>旅の記録</h3><button class="text-link" data-action="history">すべて見る →</button></div>
         <div class="panel"><p class="muted" style="margin:0">訪問 ${game.visitHistory.length} 駅 · クエスト達成 ${game.visitHistory.flatMap(v => v.quests).filter(q => q.completed).length} 件</p></div>
         <div class="goal-actions"><button data-action="collection">駅図鑑で記録を見る ↗</button><button data-action="share">この旅をシェア ↗</button></div><p class="share-feedback" role="status" aria-live="polite"></p></div>`,
@@ -578,13 +580,14 @@
     const s = screen();
     const home = view === "landing" || view === "game" && !game;
     const canHistory = game?.startStationId && game.visitHistory.length > 0;
+    const setup = !home && view !== "map" && !game?.lineId;
     const navIcons = {
       home:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-7h6v7"/></svg>',
       trip:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r=".8"/><circle cx="16" cy="8" r=".8"/><circle cx="12" cy="12" r=".8"/><circle cx="8" cy="16" r=".8"/><circle cx="16" cy="16" r=".8"/></svg>',
       map:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15m6-12v15"/></svg>',
       atlas:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12a2 2 0 0 1 2 2v16H7a3 3 0 0 1-3-3V4a1 1 0 0 1 1-1zM7 21a3 3 0 0 1 0-6h12"/><path d="m11 8 1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/></svg>'
     };
-    app.innerHTML = `<main class="shell ${home ? "home-shell" : view === "map" ? "map-shell" : "game-shell"}">
+    app.innerHTML = `<main class="shell ${home ? "home-shell" : view === "map" ? "map-shell" : "game-shell"}${setup ? " setup-shell" : ""}">
       <aside class="side side-left"><div class="brand"><span class="brand-mark">M</span>きまぐれメトロ旅</div>
         <div><span class="side-kicker">A SMALL TRIP, BY CHANCE</span><h1>次の駅は、<br><strong>サイコロ次第。</strong></h1>
           <p>今いる駅からでも、抽選からでも。ひと駅ずつ進むたび、街に新しい発見がある。</p></div>
@@ -595,7 +598,7 @@
         <button class="icon-btn" data-action="${view === "collection" ? "back" : "collection"}">${view === "collection" ? "戻る" : "駅図鑑"}</button>
         ${canHistory ? `<button class="icon-btn" data-action="${view === "history" ? "back" : "history"}">${view === "history" ? "戻る" : "記録"}</button>` : ""}</div>
         </header><div class="app-body" id="screen" tabindex="-1" aria-live="polite">${s.body}</div>
-        <footer class="action-area">${s.action}${game && game.gameState !== "GOAL" && !["history","map","landing","collection"].includes(view) ? '<button class="text-link action-sub" data-action="restart">新しい旅をはじめる</button>' : ""}</footer>
+        <footer class="action-area">${s.action}${view === "game" && ["READY_TO_ROLL","TRAVELING","ARRIVED"].includes(game?.gameState) ? '<button class="text-link action-sub" data-action="restart">新しい旅をはじめる</button>' : ""}</footer>
         <nav class="mobile-nav" aria-label="主要メニュー">
           <button data-action="home" ${home ? 'aria-current="page"' : ""}>${navIcons.home}<span>ホーム</span></button>
           <button data-action="${game ? "resume" : "start"}" ${view === "game" && game ? 'aria-current="page"' : ""}>${navIcons.trip}<span>旅</span></button>
@@ -603,7 +606,7 @@
           <button data-action="${view === "collection" ? "noop" : "collection"}" ${view === "collection" ? 'aria-current="page"' : ""}>${navIcons.atlas}<span>駅図鑑</span></button>
         </nav></section>
       <aside class="side side-right"><div><div class="line-key"><span class="line-pill">${!game?.lineId ? "?" : crossLine() && game.routeStops ? "↗" : line.id === "Mb" ? "m" : line.id}</span><h2>${!game?.lineId ? "旅の準備" : crossLine() && game.routeStops ? "路線横断の旅" : lineName()} <span class="mini-label">${!game?.lineId ? "路線を選択" : crossLine() && game.routeStops ? game.networkJourney.hops + "駅 · 乗換" + game.networkJourney.transfers + "回" : stations.length + "駅"}</span></h2></div>
-        <div class="route-side" aria-label="${!game?.lineId ? "出発路線を選択" : crossLine() && game.routeStops ? "乗換を含む旅の経路" : lineName() + "全" + stations.length + "駅"}">${sideMap()}</div></div>
+        <div class="route-side" aria-label="${lotteryPreview ? "駅を抽選中" : !game?.lineId ? "出発路線を選択" : crossLine() && game.routeStops ? "乗換を含む旅の経路" : lineName() + "全" + stations.length + "駅"}">${sideMap()}</div></div>
         <p class="side-hint">● 現在地　● ゴール<br>途中でページを閉じても、次回続きから再開できます。</p></aside>
     </main>`;
     app.querySelector(".shell").style.setProperty("--line-color", crossLine() && game?.routeStops ? "#238f73" : line.color);

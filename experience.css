@@ -39,6 +39,17 @@ body{background:#e5ebe4}
 .game-shell .mode-card em{margin-top:auto;padding-top:13px}
 .game-shell .line-list{grid-template-columns:repeat(2,minmax(0,1fr))}
 .game-shell .line-list .line-card{min-height:91px}
+.setup-shell{grid-template-columns:minmax(0,1fr)}
+.setup-shell .side-right{display:none}
+.setup-shell .device{border-radius:21px}
+.rail-wait{
+  min-height:250px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;color:#3e6050;border:1px dashed #ceb98e;border-radius:15px;
+  background:radial-gradient(circle at center,#efe5d2,#fbf9f2 72%);
+}
+.rail-wait-symbol{font-size:2.5rem;color:#be8f4e;margin-bottom:9px}
+.rail-wait b{font:600 1.06rem var(--premium-serif)}
+.rail-wait p{font-size:.7rem;color:#7a887a}
 .map-shell{max-width:1390px;grid-template-columns:minmax(0,1fr);padding:22px}
 .map-shell .device{
   border-radius:21px;min-height:calc(100dvh - 44px);max-height:calc(100dvh - 44px)
@@ -170,6 +181,15 @@ body{background:#e5ebe4}
 .quest-panel .quest button{width:37px;height:37px;border-radius:11px}
 .quest-panel .quest p{font-size:.94rem}
 .arrival-ticket{border-radius:19px}
+.goal-stamp{
+  width:max-content;max-width:100%;margin:25px auto 0;padding:10px 17px;
+  display:flex;align-items:baseline;justify-content:center;gap:18px;
+  border:1px solid #e0bc7c89;border-radius:99px;background:#ffffff13;
+  color:#f5e3c5;
+}
+.goal-stamp span{font-size:.75rem;font-weight:700}
+.goal-stamp strong{color:#f8d28d;font:500 1.15rem "DM Mono",monospace}
+.goal-stamp small{color:#cdd8c9;font-size:.64rem}
 .mobile-nav svg{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .mobile-nav circle{fill:currentColor;stroke:none}
 
@@ -185,6 +205,7 @@ body{background:#e5ebe4}
     width:100%;min-height:100dvh;max-height:100dvh;height:100dvh;
     border:0;border-radius:0;box-shadow:none;
   }
+  .setup-shell .device{border-radius:0}
   .app-top,.home-shell .app-top{
     height:62px;padding:10px 20px;position:relative;z-index:6;
     background:#f8f5ec;
@@ -255,7 +276,7 @@ body{background:#e5ebe4}
   .home-shell .lp-description{font-size:.75rem;line-height:1.8;color:#dce9df;max-width:290px}
   .home-shell .lp-journey-steps,.home-shell .lp-photo-label,.home-shell .lp-map-link{display:none}
   .home-shell .lp-live-card{
-    left:25px;right:25px;bottom:152px;width:auto;min-width:0;
+    left:25px;right:25px;bottom:180px;width:auto;min-width:0;
     background:#092820cf;padding:13px 15px;
   }
   .home-shell .action-area{
