@@ -1,6 +1,7 @@
 (() => {
   "use strict";
   const KEY = "kimagure-metro-v1";
+  const COLLECTION_KEY = "kimagure-metro-collection-v1";
   const lines = window.METRO_DATA.lines;
   const metroMap = window.METRO_MAP;
   let line = lines[0];
@@ -36,6 +37,8 @@
   let game = null;
   let view = "game";
   let mapReturnView = "game";
+  let collectionReturnView = "game";
+  let historyReturnView = "game";
   let mapFocusId = null;
   let mapSelectedName = null;
   let mapFrom = null;
@@ -47,6 +50,20 @@
   let displayStation = null;
   let diceDisplay = null;
   let restoreError = false;
+  let collection = { version:1, visits:{}, journeys:[], completedCount:0 };
+  let hasCollection = false;
+
+  try {
+    const raw = localStorage.getItem(COLLECTION_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      if (saved.version === 1 && saved.visits && typeof saved.visits === "object" &&
+          Array.isArray(saved.journeys) && Number.isInteger(saved.completedCount)) {
+        collection = saved;
+        hasCollection = true;
+      }
+    }
+  } catch (e) { /* An invalid collection can be started again without losing the current trip. */ }
 
   try {
     const raw = localStorage.getItem(KEY);
@@ -68,6 +85,40 @@
     }
   } catch (e) { restoreError = true; game = null; }
 
+  function persistCollection() {
+    try { localStorage.setItem(COLLECTION_KEY, JSON.stringify(collection)); }
+    catch (e) { /* The current session still keeps its collection. */ }
+  }
+  function addVisit(visit) {
+    const stationLine = lineById(visit.lineId);
+    if (!stationLine?.stations.some(s => s.id === visit.stationId && s.name === visit.stationName)) return;
+    const previous = collection.visits[visit.stationName];
+    collection.visits[visit.stationName] = {
+      firstAt: previous?.firstAt || visit.arrivedAt,
+      lastAt: visit.arrivedAt,
+      count: (previous?.count || 0) + 1,
+      lineIds: [...new Set([...(previous?.lineIds || []), visit.lineId])]
+    };
+  }
+  function addCompletion(source) {
+    if (collection.journeys.some(j => j.id === source.gameId)) return;
+    const from = source.travelMode === "network" ? source.routeStops?.[0]?.name :
+      lineById(source.lineId)?.stations.find(s => s.id === source.startStationId)?.name;
+    const to = source.visitHistory.at(-1)?.stationName;
+    if (!from || !to) return;
+    collection.completedCount++;
+    collection.journeys.unshift({id:source.gameId,from,to,mode:source.travelMode,
+      date:source.visitHistory.at(-1).arrivedAt,hops:source.travelMode === "network" ?
+      source.networkJourney?.hops : Math.abs(lineById(source.lineId).stations.findIndex(s => s.id === source.startStationId) -
+      lineById(source.lineId).stations.findIndex(s => s.id === source.goalStationId))});
+    collection.journeys = collection.journeys.slice(0,30);
+  }
+  if (!hasCollection && game?.visitHistory?.length) {
+    game.visitHistory.forEach(addVisit);
+    if (game.gameState === "GOAL") addCompletion(game);
+    persistCollection();
+  }
+
   function save(patch) {
     game = { ...game, ...patch, updatedAt: new Date().toISOString() };
     try { localStorage.setItem(KEY, JSON.stringify(game)); }
@@ -81,7 +132,7 @@
   }
   function start() {
     game = {
-      schemaVersion: 1, gameId: uuid(), gameState: "MODE_SELECTION", travelMode: null,
+      schemaVersion: 1, gameId: uuid(), gameState: "MODE_SELECTION", travelMode: null, distance:"short",
       lineId: null, startStationId: null, goalStationId: null,
       currentStationId: null, pendingStationId: null,
       routeStops: null, networkJourney: null, routeIndex: 0, pendingIndex: null,
@@ -108,6 +159,12 @@
     save({ startStationId: selected.id, currentStationId: selected.id, gameState: "GOAL_LOTTERY" });
     runReel(selected.name);
   }
+  function setStart(id) {
+    if (busy || game?.gameState !== "START_LOTTERY") return;
+    const selected = stations.find(s => s.id === id);
+    if (!selected) return;
+    save({ startStationId:selected.id, currentStationId:selected.id, gameState:"GOAL_LOTTERY" });
+  }
   function chooseGoal() {
     if (busy || game?.gameState !== "GOAL_LOTTERY") return;
     busy = true;
@@ -116,12 +173,14 @@
       const startNames = new Set(stations.map(s => s.name));
       const candidates = [...metroMap.stations.keys()].filter(name => !startNames.has(name));
       const shuffled = candidates.map(name => ({name, order: random(0x10000)})).sort((a,b) => a.order-b.order);
+      const short = game.distance === "short";
+      const targetHops = short ? 6 : 11;
       let selected = null, fallback = null;
       for (const {name} of shuffled) {
         const journey = metroMap.findRoute(from,name,{startLineId:line.id});
         if (!journey || journey.transfers < 1) continue;
-        if (!fallback || Math.abs(journey.hops-11) < Math.abs(fallback.hops-11)) fallback = journey;
-        if (journey.hops >= 6 && journey.hops <= 16 && journey.transfers <= 2) { selected = journey; break; }
+        if (!fallback || Math.abs(journey.hops-targetHops) < Math.abs(fallback.hops-targetHops)) fallback = journey;
+        if (journey.hops >= (short ? 3 : 6) && journey.hops <= (short ? 8 : 16) && journey.transfers <= 2) { selected = journey; break; }
       }
       const journey = selected || fallback;
       if (!journey) { busy = false; render(); return; }
@@ -137,8 +196,9 @@
       return;
     }
     const startIndex = byId(game.startStationId);
-    const offset = 1 + random(stations.length - 1);
-    const goal = stations[(startIndex + offset) % stations.length];
+    const nearby = stations.filter((s,i) => i !== startIndex && Math.abs(i-startIndex) <= 6);
+    const goal = game.distance === "short" ? nearby[random(nearby.length)] :
+      stations[(startIndex + 1 + random(stations.length - 1)) % stations.length];
     lotteryPreview = { kind: "DESTINATION", finalName: goal.name };
     const direction = Math.sign(byId(goal.id) - startIndex);
     save({ goalStationId: goal.id, direction, gameState: "READY_TO_ROLL" });
@@ -221,6 +281,9 @@
     const isGoal = crossLine() ? game.pendingIndex === game.routeStops.length-1 : target.id === game.goalStationId;
     const visit = { visitId: uuid(), stationId: target.id, arrivedAt: new Date().toISOString(),
       lineId: stop?.lineId || line.id, stationName:target.name, diceValue: game.lastDice, quests, isGoal };
+    addVisit(visit);
+    if (isGoal) addCompletion({...game,visitHistory:[...game.visitHistory,visit]});
+    persistCollection();
     save({
       currentStationId: target.id, pendingStationId: null,
       ...(crossLine() ? {routeIndex:game.pendingIndex,pendingIndex:null} : {}),
@@ -349,6 +412,37 @@
         <details class="history-quests"><summary>この駅のクエストを見る</summary><ul>${v.quests.map(q => `<li class="${q.completed ? "done" : ""}"><span>${q.completed ? "✓" : "○"}</span>${escapeHtml(q.text)}</li>`).join("")}</ul></details></div>`).join("")}
       </div>`;
   }
+  function collectionScreen() {
+    const visits = new Map(Object.entries(collection.visits).filter(([name,v]) =>
+      metroMap.stations.has(name) && v && Array.isArray(v.lineIds) && Number.isFinite(v.count)));
+    const count = visits.size, total = metroMap.stations.size;
+    const arrivals = [...visits.values()].reduce((sum,v) => sum + v.count,0);
+    const touchedLines = lines.filter(l => l.id !== "Mb" && l.stations.some(s =>
+      visits.get(s.name)?.lineIds.includes(l.id) || l.id === "M" && visits.get(s.name)?.lineIds.includes("Mb"))).length;
+    const routeRows = lines.map(l => {
+      const reached = l.stations.filter(s => visits.get(s.name)?.lineIds.includes(l.id)).length;
+      const percent = Math.round(reached / l.stations.length * 100);
+      return `<button class="collection-line" data-action="collection-line" data-line="${l.id}" style="--collection-color:${l.color}">
+        <span class="line-pill">${l.id === "Mb" ? "m" : l.id}</span><span class="collection-line-name"><b>${escapeHtml(l.name.replace("（分岐線）", "（方南町支線）"))}</b><span class="collection-line-bar"><i style="width:${percent}%"></i></span></span>
+        <strong>${reached}<small> / ${l.stations.length}</small></strong></button>`;
+    }).join("");
+    const recent = [...visits.entries()].filter(([,v]) => Number.isFinite(Date.parse(v.lastAt)))
+      .sort((a,b) => Date.parse(b[1].lastAt)-Date.parse(a[1].lastAt)).slice(0,5)
+      .map(([name,v]) => `<div class="collection-visit"><span class="collection-visit-dot"></span><div><b>${escapeHtml(name)}</b><small>${new Date(v.lastAt).toLocaleDateString("ja-JP")} · ${v.count}回到着</small></div><span>↗</span></div>`).join("");
+    return `<div class="fade-in collection-screen"><span class="eyebrow">YOUR METRO ATLAS</span>
+      <h2 class="screen-title">訪れた駅が、旅の地図になる。</h2>
+      <p class="muted">到着を確定した駅がここに残ります。位置情報は取得せず、この端末に保存します。</p>
+      <section class="collection-hero"><span class="display-kicker">STATIONS DISCOVERED</span>
+        <div class="collection-tally"><strong>${count}</strong><span> / ${total} 駅</span></div>
+        <div class="collection-progress" role="progressbar" aria-label="駅図鑑の収集" aria-valuenow="${count}" aria-valuemin="0" aria-valuemax="${total}"><i style="width:${Math.round(count/total*100)}%"></i></div>
+        <p>${count ? "次のひと駅で、地図を少しずつ広げよう。" : "最初のひと駅が、旅のコレクションの始まり。"}</p></section>
+      <div class="collection-stats"><div><b>${arrivals}</b><span>到着記録</span></div><div><b>${collection.completedCount}</b><span>完走した旅</span></div><div><b>${touchedLines}</b><span>訪れた路線</span></div></div>
+      <div class="collection-heading"><span class="mini-label">DISCOVER BY LINE</span><h3>路線ごとの発見</h3><p class="route-note">路線をタップすると、路線図で駅を探せます。</p></div>
+      <div class="collection-lines">${routeRows}</div>
+      ${recent ? `<div class="collection-heading"><span class="mini-label">RECENT ARRIVALS</span><h3>最近の到着</h3></div><div class="collection-recent">${recent}</div>` : ""}
+      ${game?.visitHistory?.length ? '<button class="text-link collection-history" data-action="history">今回の旅の記録を見る →</button>' : ""}
+      </div>`;
+  }
   function sideMap() {
     if (!game?.lineId) return '<p class="route-note">出発路線を選ぶと、駅の並びがここに表示されます。</p>';
     if (crossLine() && game.routeStops) return game.routeStops.map((s,i) => {
@@ -370,7 +464,7 @@
       body: `<div class="lp-home fade-in"><div class="lp-copy"><span class="lp-overline"><i></i> TOKYO METRO / ALL 9 LINES</span>
         <h2>次の駅は、<br><strong>サイコロ<br>次第。</strong></h2>
         <p class="lp-lead">行き先を決めないから、<br>出会える街がある。</p>
-        <p class="lp-description">1路線をじっくり、または乗換を重ねて別の路線へ。サイコロを振るたび、いつもの東京が少し違って見えてくる。</p>
+        <p class="lp-description">1路線をじっくり、または乗換を重ねて別の路線へ。今いる駅からも始められ、出会った街は駅図鑑に残ります。</p>
         <div class="lp-journey-steps"><div><span>01 / CHOOSE</span><b>路線を選ぶ</b></div><div><span>02 / ROLL</span><b>サイコロで進む</b></div><div><span>03 / EXPLORE</span><b>駅で街を発見</b></div></div>
         ${restoreError ? '<p class="error">保存された旅を読み込めませんでした。新しい旅を始められます。</p>' : ""}
       </div><div class="lp-visual">
@@ -383,8 +477,9 @@
   }
   function screen() {
     if (view === "landing") return homeScreen();
-    if (view === "map") return { body: mapScreen(), action: '<button class="primary" data-action="back">旅の画面に戻る　→</button>' };
-    if (view === "history" && game?.startStationId) return { body: history(), action: '<button class="primary" data-action="back">旅に戻る</button>' };
+    if (view === "map") return { body: mapScreen(), action: `<button class="primary" data-action="back">${mapReturnView === "collection" ? "駅図鑑に戻る" : mapReturnView === "landing" ? "トップへ戻る" : "旅の画面に戻る"}　→</button>` };
+    if (view === "collection") return { body: collectionScreen(), action: game ? `<button class="primary" data-action="back">${collectionReturnView === "landing" ? "トップへ戻る" : collectionReturnView === "map" ? "路線図へ戻る" : "旅の画面に戻る"}　→</button>` : '<button class="primary" data-action="start">新しい旅をはじめる　→</button>' };
+    if (view === "history" && game?.startStationId) return { body: history(), action: `<button class="primary" data-action="back">${historyReturnView === "collection" ? "駅図鑑に戻る" : "旅に戻る"}　→</button>` };
     if (lotteryPreview) return {
       body: `<div class="fade-in"><span class="eyebrow">STATION LOTTERY</span><h2 class="screen-title">${lotteryPreview.kind === "DESTINATION" ? "ゴール駅" : "出発駅"}を抽選中</h2>
         <div class="panel-dark" role="status"><span class="display-kicker">${lotteryPreview.kind}</span>
@@ -396,7 +491,7 @@
     if (state === "HOME") return homeScreen();
     if (state === "MODE_SELECTION") return {
       body: `<div class="fade-in"><span class="eyebrow">CHOOSE YOUR JOURNEY</span><h2 class="screen-title">今日は、どんな旅？</h2>
-        <p class="muted">どちらのモードも出発駅とゴール駅を抽選。旅の途中はサイコロで進みます。</p>
+        <p class="muted">出発駅は抽選するか、今いる駅を選択。ゴール駅を抽選したら、サイコロで進みます。</p>
         <div class="mode-list"><button class="mode-card" data-action="select-mode" data-mode="single"><span class="mode-icon">Ⅰ</span><span class="mini-label">ONE LINE</span><strong>ひとつの路線で</strong><small>選んだ路線の駅を行き来。いつもの街を深掘り。</small><em>この旅を選ぶ →</em></button>
         <button class="mode-card network" data-action="select-mode" data-mode="network"><span class="mode-icon">↗</span><span class="mini-label">CROSS THE NETWORK</span><strong>路線をまたいで</strong><small>出発路線から乗換して、新しい街へ。駅数で進むルート旅。</small><em>この旅を選ぶ →</em></button></div>
         <p class="route-note">路線横断の経路は駅数優先の模式ルート。実際の乗換動線・時間・運賃は考慮しません。</p></div>`,
@@ -415,10 +510,16 @@
       return {
         body: `<div class="fade-in"><span class="eyebrow">STEP ${isStart ? "01" : "02"} / 02</span>
           <h2 class="screen-title">${isStart ? "出発駅を決めよう" : "ゴール駅を決めよう"}</h2>
-          <p class="muted">${isStart ? lineName() + stations.length + "駅から、出発駅を抽選します。" : "出発駅は " + label(game.startStationId) + "。次は" + (crossLine() ? "別の路線の" : "") + "ゴールを抽選します。"}</p>
+          <p class="muted">${isStart ? lineName() + stations.length + "駅から抽選するか、今いる駅を選べます。" : "出発駅は " + label(game.startStationId) + "。旅の長さを選んで" + (crossLine() ? "別の路線の" : "") + "ゴールを抽選します。"}</p>
           <div class="panel-dark"><span class="display-kicker">${isStart ? "START STATION" : "DESTINATION"}</span>
             <div class="display-station ${busy ? "reel-flash" : ""}">${displayStation || (isStart ? "？？？" : "？？？")}</div>
             <span class="display-code">${crossLine() && !isStart ? "ALL 9 LINES / TRANSFER ROUTE" : lineName() + " · " + stations.length + "駅"}</span><div class="display-underline"></div></div>
+          ${isStart ? `<details class="start-picker"><summary><span><b>今いる駅から始める</b><small>実際の出発駅を選択</small></span><span aria-hidden="true">＋</span></summary>
+            <div class="start-station-list">${stations.map(s => `<button data-action="set-start" data-station="${s.id}"><small>${s.id}</small>${escapeHtml(s.name)}<span aria-hidden="true">→</span></button>`).join("")}</div></details>` :
+            `<fieldset class="trip-distance"><legend>旅の長さを選ぶ</legend><div class="distance-options">
+              <button data-action="set-distance" data-distance="short" aria-pressed="${game.distance === "short"}"><strong>近場でひと旅</strong><small>${crossLine() ? "3〜8駅を目安に乗換" : "1〜6駅の近場へ"}</small></button>
+              <button data-action="set-distance" data-distance="free" aria-pressed="${game.distance !== "short"}"><strong>気ままに遠くへ</strong><small>${crossLine() ? "6〜16駅を目安に乗換" : "路線内の全駅から"}</small></button>
+            </div></fieldset>`}
           <p class="route-note">抽選した駅はそのまま保存されます。ページを閉じても続きから再開できます。</p></div>`,
         action: `<button class="primary" data-action="${isStart ? "choose-start" : "choose-goal"}" ${busy ? "disabled" : ""}>${isStart ? "出発駅を抽選する" : "ゴール駅を抽選する"}　→</button>`
       };
@@ -458,7 +559,8 @@
         <span class="mini-label" style="color:#f7b951">GOAL / ${game.goalStationId}</span><div class="big">${escapeHtml(goalName())}</div>
         <p>${escapeHtml(crossLine() ? game.routeStops[0].name : label(game.startStationId))}から ${game.visitHistory.length} 回の到着。<br>今日だけの旅ができました。</p></div>
         ${questList()}<div class="list-head"><h3>旅の記録</h3><button class="text-link" data-action="history">すべて見る →</button></div>
-        <div class="panel"><p class="muted" style="margin:0">訪問 ${game.visitHistory.length} 駅 · クエスト達成 ${game.visitHistory.flatMap(v => v.quests).filter(q => q.completed).length} 件</p></div></div>`,
+        <div class="panel"><p class="muted" style="margin:0">訪問 ${game.visitHistory.length} 駅 · クエスト達成 ${game.visitHistory.flatMap(v => v.quests).filter(q => q.completed).length} 件</p></div>
+        <div class="goal-actions"><button data-action="collection">駅図鑑で記録を見る ↗</button><button data-action="share">この旅をシェア ↗</button></div><p class="share-feedback" role="status" aria-live="polite"></p></div>`,
       action: '<button class="primary" data-action="restart">新しい旅をはじめる　→</button>'
     };
     return { body: '<p class="error">旅の状態を読み込めません。新しい旅を始めてください。</p>',
@@ -472,14 +574,15 @@
     app.innerHTML = `<main class="shell${home ? " home-shell" : view === "map" ? " map-shell" : ""}">
       <aside class="side side-left"><div class="brand"><span class="brand-mark">M</span>きまぐれメトロ旅</div>
         <div><span class="side-kicker">A SMALL TRIP, BY CHANCE</span><h1>次の駅は、<br><strong>サイコロ次第。</strong></h1>
-          <p>出発駅も、ゴールも、今日の運次第。ひと駅ずつ進むたび、街に新しい発見がある。</p></div>
+          <p>今いる駅からでも、抽選からでも。ひと駅ずつ進むたび、街に新しい発見がある。</p></div>
         <div class="side-foot">東京メトロ全9路線で遊べます。<br>ログイン不要。進行はこの端末に保存されます。</div></aside>
       <section class="device" aria-label="旅の操作画面"><header class="app-top">
         <button class="app-logo app-home-link" data-action="home" aria-label="トップページへ"><span>${game?.lineId || "METRO"}</span>きまぐれメトロ旅</button>
         <div class="header-actions"><button class="icon-btn" data-action="${view === "map" ? "back" : "map"}">${view === "map" ? "戻る" : "路線図"}</button>
+        <button class="icon-btn" data-action="${view === "collection" ? "back" : "collection"}">${view === "collection" ? "戻る" : "駅図鑑"}</button>
         ${canHistory ? `<button class="icon-btn" data-action="${view === "history" ? "back" : "history"}">${view === "history" ? "戻る" : "記録"}</button>` : ""}</div>
         </header><div class="app-body" id="screen" tabindex="-1" aria-live="polite">${s.body}</div>
-        <footer class="action-area">${s.action}${game && !["history","map","landing"].includes(view) ? '<button class="text-link action-sub" data-action="restart">新しい旅をはじめる</button>' : ""}</footer></section>
+        <footer class="action-area">${s.action}${game && game.gameState !== "GOAL" && !["history","map","landing","collection"].includes(view) ? '<button class="text-link action-sub" data-action="restart">新しい旅をはじめる</button>' : ""}</footer></section>
       <aside class="side side-right"><div><div class="line-key"><span class="line-pill">${!game?.lineId ? "?" : crossLine() && game.routeStops ? "↗" : line.id === "Mb" ? "m" : line.id}</span><h2>${!game?.lineId ? "旅の準備" : crossLine() && game.routeStops ? "路線横断の旅" : lineName()} <span class="mini-label">${!game?.lineId ? "路線を選択" : crossLine() && game.routeStops ? game.networkJourney.hops + "駅 · 乗換" + game.networkJourney.transfers + "回" : stations.length + "駅"}</span></h2></div>
         <div class="route-side" aria-label="${!game?.lineId ? "出発路線を選択" : crossLine() && game.routeStops ? "乗換を含む旅の経路" : lineName() + "全" + stations.length + "駅"}">${sideMap()}</div></div>
         <p class="side-hint">● 現在地　● ゴール<br>途中でページを閉じても、次回続きから再開できます。</p></aside>
@@ -496,6 +599,19 @@
       viewport.scrollTop = point[1] / 1260 * viewport.scrollHeight - viewport.clientHeight / 2;
     }
   }
+  function shareJourney() {
+    if (game?.gameState !== "GOAL") return;
+    const from = crossLine() ? game.routeStops[0].name : label(game.startStationId);
+    const message = `きまぐれメトロ旅で、${from}から${goalName()}まで。${game.visitHistory.length}駅に到着した今日の旅。次はどこへ行こう？`;
+    const url = location.origin + location.pathname;
+    const feedback = value => { const el = app.querySelector(".share-feedback"); if (el) el.textContent = value; };
+    if (navigator.share) navigator.share({title:"きまぐれメトロ旅",text:message,url})
+      .catch(error => { if (error.name !== "AbortError") feedback("共有できませんでした。もう一度お試しください。"); });
+    else if (navigator.clipboard?.writeText) navigator.clipboard.writeText(`${message}\n${url}`)
+      .then(() => feedback("旅の紹介文とURLをコピーしました。"))
+      .catch(() => feedback("コピーできませんでした。"));
+    else if (typeof window.prompt === "function") window.prompt("旅の紹介文をコピー", `${message}\n${url}`);
+  }
   app.addEventListener("click", e => {
     const button = e.target.closest("[data-action]");
     if (!button || button.disabled) return;
@@ -509,6 +625,8 @@
     }
     if (action === "clear") { reset(); return; }
     if (action === "select-mode") selectMode(button.dataset.mode);
+    if (action === "set-start") setStart(button.dataset.station);
+    if (action === "set-distance" && game?.gameState === "GOAL_LOTTERY" && ["short","free"].includes(button.dataset.distance)) save({distance:button.dataset.distance});
     if (action === "choose-start") chooseStart();
     if (action === "select-line") selectLine(button.dataset.line);
     if (action === "choose-goal") chooseGoal();
@@ -517,6 +635,16 @@
     if (action === "quest") toggleQuest(button.dataset.id);
     if (action === "reroll-quests") rerollQuests();
     if (action === "next" && game?.gameState === "ARRIVED") save({ gameState: "READY_TO_ROLL" });
+    if (action === "collection") {
+      if (view === "collection") view = collectionReturnView;
+      else { collectionReturnView = view; view = "collection"; }
+      render(); app.querySelector("#screen")?.scrollTo(0,0); return;
+    }
+    if (action === "collection-line" && view === "collection" && lines.some(l => l.id === button.dataset.line)) {
+      mapReturnView = "collection"; mapFocusId = button.dataset.line; mapSelectedName = null;
+      mapFrom = mapTo = null; view = "map"; render(); app.querySelector("#screen")?.scrollTo(0,0); return;
+    }
+    if (action === "share") { shareJourney(); return; }
     if (action === "map") { mapReturnView = view; mapFocusId = crossLine() && game?.routeStops ? null : game?.lineId || null; mapFrom = game?.currentStationId ? currentName() : null; mapTo = game?.goalStationId ? goalName() : null; view = "map"; render(); }
     if (action === "map-trip" && crossLine() && game.networkJourney) {
       mapReturnView = view; mapFocusId = null; mapSelectedName = null;
@@ -531,9 +659,9 @@
     if (action === "map-clear" && view === "map") { mapFrom = mapTo = null; render(); }
     if (action === "map-zoom-in" && view === "map") { mapZoom = Math.min(1.6,Math.round((mapZoom+.3)*10)/10); render(); }
     if (action === "map-zoom-out" && view === "map") { mapZoom = Math.max(.7,Math.round((mapZoom-.3)*10)/10); render(); }
-    if (action === "history" && game) { view = "history"; render(); }
-    if (action === "back") { view = view === "map" ? mapReturnView : "game"; render(); }
-    if (["select-mode","select-line","choose-start","choose-goal","roll","arrive","next","history","back","map","map-trip"].includes(action))
+    if (action === "history" && game) { historyReturnView = view; view = "history"; render(); }
+    if (action === "back") { view = view === "map" ? mapReturnView : view === "history" ? historyReturnView : view === "collection" ? collectionReturnView : "game"; render(); }
+    if (["select-mode","select-line","set-start","choose-start","choose-goal","roll","arrive","next","history","back","map","map-trip"].includes(action))
       app.querySelector("#screen")?.scrollTo(0, 0);
   });
   app.addEventListener("input", e => {
