@@ -467,18 +467,21 @@
       : `旅の続き　${escapeHtml(currentName())} → ${escapeHtml(goalName())}`
       : "東京メトロ全9路線から、偶然のひと駅へ";
     return {
-      body: `<div class="lp-home fade-in"><div class="lp-copy"><span class="lp-overline"><i></i> TOKYO METRO / ALL 9 LINES</span>
-        <h2>次の駅は、<br><strong>サイコロ<br>次第。</strong></h2>
-        <p class="lp-lead">行き先を決めないから、<br>出会える街がある。</p>
-        <p class="lp-description">1路線をじっくり、または乗換を重ねて別の路線へ。今いる駅からも始められ、出会った街は駅図鑑に残ります。</p>
-        <div class="lp-journey-steps"><div><span>01 / CHOOSE</span><b>路線を選ぶ</b></div><div><span>02 / ROLL</span><b>サイコロで進む</b></div><div><span>03 / EXPLORE</span><b>駅で街を発見</b></div></div>
-        ${restoreError ? '<p class="error">保存された旅を読み込めませんでした。新しい旅を始められます。</p>' : ""}
-      </div><div class="lp-visual">
-        <img src="./metro-hero-premium.webp" alt="深緑の地下鉄ホームに入る列車と琥珀色のサイコロ" width="1586" height="992" decoding="async">
-        <div class="lp-photo-label"><span>きまぐれメトロ旅</span><b>偶然のひと駅へ。</b></div>
-        <div class="lp-live-card"><span class="lp-live-light" aria-hidden="true"></span><span>${tripStatus}</span><b>${discovered} / ${metroMap.stations.size} <small>駅発見</small></b></div>
-        <button class="lp-map-link" data-action="map" aria-label="全路線のSVG路線図を見る"><span class="lp-map-preview" aria-hidden="true">${metroMap.overview({preview:true})}</span><span class="lp-map-bottom"><b>全9路線の路線図</b><em>見てみる ↗</em></span></button>
-      </div></div>`,
+      body: `<section class="campaign-hero fade-in" aria-label="きまぐれメトロ旅">
+        <picture class="campaign-art"><source media="(max-width:690px)" srcset="./metro-portal-portrait.webp"><img src="./metro-portal-landscape.webp" alt="地下鉄の扉の向こうに東京の街が広がり、足元にサイコロが置かれたイメージ" width="1774" height="887" decoding="async" fetchpriority="high"></picture>
+        <div class="campaign-shade" aria-hidden="true"></div>
+        <div class="campaign-copy">
+          <span class="campaign-eyebrow"><i aria-hidden="true"></i> A SMALL TRIP, BY CHANCE</span>
+          <h1>次の駅は、<br><strong>サイコロ次第。</strong></h1>
+          <p class="campaign-lead">予定にない東京を、見つけよう。</p>
+          <p class="campaign-description">今いる駅からでも、抽選からでも。ひと駅ずつ進むたび、知らなかった街に出会える。</p>
+          <div class="campaign-path" aria-label="旅の流れ"><span>路線を選ぶ</span><i aria-hidden="true"></i><span>サイコロを振る</span><i aria-hidden="true"></i><span>街を発見</span></div>
+          <div class="campaign-status"><span class="campaign-status-dot" aria-hidden="true"></span><span>${tripStatus}</span><b>${discovered} / ${metroMap.stations.size} 駅発見</b></div>
+          ${restoreError ? '<p class="error">保存された旅を読み込めませんでした。新しい旅を始められます。</p>' : ""}
+        </div>
+        <button class="campaign-map-link" data-action="map" aria-label="東京メトロ全9路線のSVG路線図を見る"><span class="campaign-map-preview" aria-hidden="true">${metroMap.overview({preview:true})}</span><span class="campaign-map-label"><small>EXPLORE THE NETWORK</small><b>全9路線の路線図 <em>↗</em></b></span></button>
+        <span class="campaign-network-count">09 LINES &nbsp;·&nbsp; ${metroMap.stations.size} STATIONS</span>
+      </section>`,
       action: game ? '<button class="primary" data-action="resume">旅の続きへ　→</button>' : '<button class="primary" data-action="start">新しい旅をはじめる　→</button>'
     };
   }

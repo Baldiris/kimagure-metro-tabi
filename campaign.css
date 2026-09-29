@@ -1,0 +1,121 @@
+/* Image-led home. The illustration stays free of text and controls. */
+.home-shell .device{background:#071c1b}
+.home-shell .app-top{
+  position:relative;z-index:7;background:#071c1b;color:#fff6e8;
+  border-bottom:1px solid #d5c4a62b;
+}
+.home-shell .app-logo span{color:#e5c487}
+.home-shell .app-home-link:hover{color:#f6cf8b}
+.home-shell .header-actions .icon-btn{color:#e5eadf;border-color:#85999070;background:#ffffff0b}
+.home-shell .header-actions .icon-btn:hover{background:#ffffff1a}
+.home-shell .app-body{padding:0;overflow-y:auto;background:#071c1b}
+.campaign-hero{
+  position:relative;isolation:isolate;min-height:max(605px,calc(100dvh - 123px));
+  overflow:hidden;background:#071c1b;color:#fff7e7;
+}
+.campaign-art,.campaign-shade{position:absolute;inset:0;display:block}
+.campaign-art{z-index:-2}
+.campaign-art img{display:block;width:100%;height:100%;object-fit:cover;object-position:52% 50%}
+.campaign-shade{
+  z-index:-1;pointer-events:none;
+  background:linear-gradient(90deg,#061b1ce8 0%,#061b1cd9 24%,#061b1c99 46%,#061b1c16 74%),
+    linear-gradient(180deg,#061b1c6e 0%,transparent 40%,#061b1c1a 65%,#061b1cb0 100%);
+}
+.campaign-copy{
+  position:relative;width:min(68%,780px);
+  padding:clamp(50px,7.5vh,94px) clamp(32px,5vw,80px) 175px;
+}
+.campaign-eyebrow{display:flex;align-items:center;gap:11px;color:#f0d3a3;font:600 .7rem "DM Mono",monospace;letter-spacing:.18em}
+.campaign-eyebrow i{width:29px;height:1px;background:#e6b96e}
+.campaign-copy h1{
+  margin:27px 0 20px;font:600 clamp(3.6rem,5.3vw,5.6rem)/1.18 var(--premium-serif);
+  letter-spacing:-.09em;text-shadow:0 6px 27px #031613a3;
+}
+.campaign-copy h1 strong{font-weight:600;color:#f8d08c;white-space:nowrap}
+.campaign-lead{margin:0 0 11px;font:600 clamp(1.08rem,1.5vw,1.35rem)/1.6 var(--premium-serif);letter-spacing:-.035em}
+.campaign-description{max-width:395px;margin:0;color:#e2e9df;font-size:.84rem;line-height:1.95}
+.campaign-path{
+  display:flex;align-items:center;gap:13px;white-space:nowrap;
+  margin-top:26px;color:#f5e8cc;font-size:.68rem;font-weight:700;
+}
+.campaign-path i{display:block;width:16px;height:1px;background:#d4b77e;position:relative}
+.campaign-path i:after{
+  content:"";position:absolute;right:0;top:-2px;width:5px;height:5px;
+  border-top:1px solid #d4b77e;border-right:1px solid #d4b77e;transform:rotate(45deg)
+}
+.campaign-status{
+  display:grid;grid-template-columns:7px auto;gap:5px 11px;align-items:center;
+  width:max-content;max-width:min(100%,410px);margin-top:31px;padding:13px 17px;
+  border:1px solid #f8dcab6e;border-radius:11px;
+  color:#f2f2e7;background:#061f1da8;backdrop-filter:blur(8px);
+}
+.campaign-status-dot{width:7px;height:7px;border-radius:50%;background:#f0bf71;box-shadow:0 0 0 4px #f0bf7129}
+.campaign-status>span:nth-child(2){font-size:.73rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.campaign-status b{grid-column:2;color:#f7d392;font:500 .75rem "DM Mono",monospace}
+.campaign-copy .error{max-width:385px;color:#fff5dd}
+.campaign-network-count{
+  position:absolute;top:39px;right:clamp(32px,4vw,65px);
+  color:#fcf5e0;font:500 .67rem "DM Mono",monospace;letter-spacing:.12em;
+  text-shadow:0 2px 12px #061513;
+}
+.campaign-map-link{
+  position:absolute;right:clamp(32px,4vw,65px);bottom:37px;
+  width:232px;overflow:hidden;padding:0;text-align:left;
+  border:1px solid #e5cfaa;border-radius:12px;background:#f8f5ea;color:#163c32;
+  box-shadow:0 18px 40px #041b1b8c;cursor:pointer;
+  transition:transform .2s,box-shadow .2s;
+}
+.campaign-map-link:hover{transform:translateY(-4px);box-shadow:0 24px 46px #041b1bc4}
+.campaign-map-link:focus-visible{outline:3px solid #f6cb83;outline-offset:4px}
+.campaign-map-preview{display:block;height:105px;overflow:hidden;background:#f4f4eb}
+.campaign-map-preview .network-svg{display:block;width:100%;height:100%}
+.campaign-map-label{display:block;padding:12px 15px 13px}
+.campaign-map-label small{display:block;color:#788b7d;font:600 .56rem "DM Mono",monospace;letter-spacing:.12em}
+.campaign-map-label b{display:flex;justify-content:space-between;margin-top:5px;font-size:.81rem}
+.campaign-map-label em{font-style:normal;color:#b08142;font-size:1.05rem}
+.home-shell .action-area{
+  width:min(52%,690px);padding:20px clamp(32px,5vw,80px) 37px;
+  background:linear-gradient(#071b1b00,#071b1bc2 28%,#071b1be8 100%);
+}
+.home-shell .action-area .primary{
+  max-width:480px;min-height:62px;background:linear-gradient(135deg,#ffe6ac,#eebd69);
+  color:#19352e;box-shadow:0 5px 0 #a07536,0 20px 35px #0617137a;
+  font-size:.94rem;
+}
+.home-shell .action-area .primary:hover{filter:brightness(1.05)}
+@media(max-width:1050px){
+  .campaign-hero{min-height:max(570px,calc(100dvh - 99px))}
+  .campaign-copy{width:min(70%,680px);padding:clamp(43px,6vh,70px) 36px 175px}
+  .campaign-copy h1{font-size:clamp(2.9rem,5.7vw,4.5rem)}
+  .campaign-map-link{right:28px;width:190px}
+  .campaign-map-preview{height:88px}
+  .campaign-network-count{right:28px}
+  .home-shell .action-area{padding-inline:36px;width:54%}
+}
+@media(max-width:690px){
+  .home-shell .app-top{background:#071c1b;color:#fff4e1;border-bottom-color:#cbb89034}
+  .home-shell .app-body{padding:0;overflow-y:auto}
+  .campaign-hero{min-height:max(650px,calc(100dvh - 62px));height:auto}
+  .campaign-art img{object-position:55% 48%}
+  .campaign-shade{
+    background:linear-gradient(180deg,#061b1de0 0%,#061b1da8 25%,#061b1c59 43%,transparent 61%,#061b1c85 90%,#061b1ce0 100%),
+      linear-gradient(90deg,#061b1c8c,transparent 77%);
+  }
+  .campaign-copy{width:100%;padding:39px 25px 220px}
+  .campaign-eyebrow{font-size:.58rem;letter-spacing:.15em}
+  .campaign-eyebrow i{width:22px}
+  .campaign-copy h1{margin:20px 0 16px;font-size:clamp(2.8rem,11.2vw,4.2rem);line-height:1.22}
+  .campaign-lead{font-size:1.05rem;line-height:1.5;margin-bottom:9px}
+  .campaign-description{max-width:315px;font-size:.75rem;line-height:1.75}
+  .campaign-path,.campaign-status,.campaign-map-link,.campaign-network-count{display:none}
+  .home-shell .action-area{
+    bottom:calc(70px + env(safe-area-inset-bottom));width:100%;
+    padding:25px 20px 22px;background:linear-gradient(#071b1b00,#071b1bd9 28%,#071b1bfa);
+  }
+  .home-shell .action-area .primary{max-width:none;min-height:60px}
+}
+@media(max-width:380px){
+  .campaign-copy{padding-top:32px}
+  .campaign-copy h1{font-size:2.6rem}
+}
+@media(prefers-reduced-motion:reduce){.campaign-map-link{transition:none}}

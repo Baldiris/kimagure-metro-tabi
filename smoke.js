@@ -30,7 +30,8 @@ assert(everyStation.every(s=>s.quests.length===8 &&
   s.quests.every(q=>!q.text.includes('写真') && !q.text.includes('購入'))));
 assert(first.html.includes('class="shell home-shell"'));
 assert(first.html.includes('class="network-svg is-preview"'));
-assert(first.html.includes('src="./metro-hero-premium.webp"'));
+assert(first.html.includes('src="./metro-portal-landscape.webp"'));
+assert(first.html.includes('srcset="./metro-portal-portrait.webp"'));
 first.click('map'); assert(first.html.includes('class="network-viewport"'));
 first.click('map-line', 'H'); assert(first.html.includes('data-route="H"'));
 first.click('map-station', undefined, undefined, '渋谷'); assert(first.html.includes('SELECTED STATION'));
