@@ -104,7 +104,7 @@
   .campaign-copy{width:100%;padding:39px 25px 220px}
   .campaign-eyebrow{font-size:.58rem;letter-spacing:.15em}
   .campaign-eyebrow i{width:22px}
-  .campaign-copy h1{margin:20px 0 16px;font-size:clamp(2.8rem,11.2vw,4.2rem);line-height:1.22}
+  .campaign-copy h1{margin:20px 0 16px;font-size:clamp(2rem,10.4vw,4.2rem);line-height:1.22}
   .campaign-lead{font-size:1.05rem;line-height:1.5;margin-bottom:9px}
   .campaign-description{max-width:315px;font-size:.75rem;line-height:1.75}
   .campaign-path,.campaign-status,.campaign-map-link,.campaign-network-count{display:none}
@@ -116,6 +116,5 @@
 }
 @media(max-width:380px){
   .campaign-copy{padding-top:32px}
-  .campaign-copy h1{font-size:2.6rem}
 }
 @media(prefers-reduced-motion:reduce){.campaign-map-link{transition:none}}
