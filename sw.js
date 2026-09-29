@@ -1,5 +1,5 @@
-const CACHE = "kimagure-metro-v22";
-const CORE = ["./", "./index.html", "./styles.css?v=20260927f", "./premium.css?v=20260929a", "./data.js?v=20260927f", "./quest-data.js?v=20260927f", "./metro-map.js?v=20260927d", "./metro-network.svg", "./app.js?v=20260929a", "./metro-hero-premium.webp", "./icon.svg", "./icon-192.png", "./icon-512.png", "./manifest.webmanifest"];
+const CACHE = "kimagure-metro-v23";
+const CORE = ["./", "./index.html", "./styles.css?v=20260927f", "./premium.css?v=20260929a", "./data.js?v=20260927f", "./quest-data.js?v=20260927f", "./metro-map.js?v=20260927d", "./metro-network.svg", "./app.js?v=20260929b", "./metro-hero-premium.webp", "./icon.svg", "./icon-192.png", "./icon-512.png", "./manifest.webmanifest"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
 });

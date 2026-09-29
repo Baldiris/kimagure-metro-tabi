@@ -499,7 +499,7 @@
     };
     if (state === "LINE_SELECTION") return {
       body: `<div class="fade-in"><span class="eyebrow">SELECT A LINE</span><h2 class="screen-title">${crossLine() ? "どの路線から、出発する？" : "今日は、どの路線？"}</h2>
-        <p class="muted">${crossLine() ? "出発路線を選んで駅を抽選。ゴールは別の路線から選ばれ、乗換を含むルートで向かいます。" : "東京メトロ全9路線と丸ノ内線の方南町支線。路線を選んだら、出発駅とゴールを抽選します。"}</p>
+        <p class="muted">${crossLine() ? "出発路線を選び、駅を抽選するか今いる駅を指定。ゴールは別の路線から抽選します。" : "東京メトロ全9路線と丸ノ内線の方南町支線。出発駅は抽選するか今いる駅を選べます。"}</p>
         <div class="line-list">${lines.map(item => `<button class="line-card" data-action="select-line" data-line="${item.id}" style="--line-color:${item.color}"><span class="line-pill">${item.id === "Mb" ? "m" : item.id}</span><span><strong>${item.name.replace("（分岐線）", "（方南町支線）")}</strong><small>${item.stations[0].name} — ${item.stations.at(-1).name} · ${item.stations.length}駅</small></span><span class="line-chevron">→</span></button>`).join("")}</div>
         <div class="panel"><span class="mini-label">HOW TO PLAY</span>
           <div class="feature-steps"><div><b>01</b>駅を抽選</div><div><b>02</b>サイコロで進む</div><div><b>03</b>到着して探索</div></div></div></div>`,
