@@ -485,6 +485,17 @@
       action: game ? '<button class="primary" data-action="resume">旅の続きへ　→</button>' : '<button class="primary" data-action="start">新しい旅をはじめる　→</button>'
     };
   }
+  function setupProgress(state) {
+    const stages = [
+      ["MODE_SELECTION", "旅の形"], ["LINE_SELECTION", "路線"],
+      ["START_LOTTERY", "出発駅"], ["GOAL_LOTTERY", "ゴール"]
+    ];
+    const current = stages.findIndex(([key]) => key === state);
+    return `<nav class="setup-progress" aria-label="旅の準備の進行">
+      <button class="setup-back" data-action="setup-back">← ${current === 0 ? "トップへ" : "ひとつ戻る"}</button>
+      <ol>${stages.map(([key, label], index) => `<li class="${index < current ? "done" : index === current ? "active" : ""}" ${key === state ? 'aria-current="step"' : ""}><span>${String(index + 1).padStart(2, "0")}</span>${label}</li>`).join("")}</ol>
+    </nav>`;
+  }
   function screen() {
     if (view === "landing") return homeScreen();
     if (view === "map") return { body: mapScreen(), action: `<button class="primary" data-action="back">${mapReturnView === "collection" ? "駅図鑑に戻る" : mapReturnView === "landing" ? "トップへ戻る" : "旅の画面に戻る"}　→</button>` };
@@ -500,15 +511,15 @@
     const state = game?.gameState || "HOME";
     if (state === "HOME") return homeScreen();
     if (state === "MODE_SELECTION") return {
-      body: `<div class="fade-in"><span class="eyebrow">CHOOSE YOUR JOURNEY</span><h2 class="screen-title">今日は、どんな旅？</h2>
+      body: `<div class="fade-in">${setupProgress(state)}<span class="eyebrow">CHOOSE YOUR JOURNEY</span><h2 class="screen-title">今日は、どんな旅？</h2>
         <p class="muted">出発駅は抽選するか、今いる駅を選択。ゴール駅を抽選したら、サイコロで進みます。</p>
-        <div class="mode-list"><button class="mode-card" data-action="select-mode" data-mode="single"><span class="mode-icon">Ⅰ</span><span class="mini-label">ONE LINE</span><strong>ひとつの路線で</strong><small>選んだ路線の駅を行き来。いつもの街を深掘り。</small><em>この旅を選ぶ →</em></button>
-        <button class="mode-card network" data-action="select-mode" data-mode="network"><span class="mode-icon">↗</span><span class="mini-label">CROSS THE NETWORK</span><strong>路線をまたいで</strong><small>出発路線から乗換して、新しい街へ。駅数で進むルート旅。</small><em>この旅を選ぶ →</em></button></div>
+        <div class="mode-list"><button class="mode-card" data-action="select-mode" data-mode="single"><span class="mode-icon">Ⅰ</span><span class="mini-label">ONE LINE</span><strong>ひとつの路線で</strong><small>選んだ路線の駅を行き来。いつもの街を深掘り。</small><span class="mode-route" aria-hidden="true"><i></i><i></i><i></i><i></i></span><em>この旅を選ぶ →</em></button>
+        <button class="mode-card network" data-action="select-mode" data-mode="network"><span class="mode-icon">↗</span><span class="mini-label">CROSS THE NETWORK</span><strong>路線をまたいで</strong><small>出発路線から乗換して、新しい街へ。駅数で進むルート旅。</small><span class="mode-route" aria-hidden="true"><i></i><i></i><i></i><i></i></span><em>この旅を選ぶ →</em></button></div>
         <p class="route-note">路線横断の経路は駅数優先の模式ルート。実際の乗換動線・時間・運賃は考慮しません。</p></div>`,
       action: '<span class="selection-hint">旅のモードを選んでください</span>'
     };
     if (state === "LINE_SELECTION") return {
-      body: `<div class="fade-in"><span class="eyebrow">SELECT A LINE</span><h2 class="screen-title">${crossLine() ? "どの路線から、出発する？" : "今日は、どの路線？"}</h2>
+      body: `<div class="fade-in">${setupProgress(state)}<span class="eyebrow">SELECT A LINE</span><h2 class="screen-title">${crossLine() ? "どの路線から、出発する？" : "今日は、どの路線？"}</h2>
         <p class="muted">${crossLine() ? "出発路線を選び、駅を抽選するか今いる駅を指定。ゴールは別の路線から抽選します。" : "東京メトロ全9路線と丸ノ内線の方南町支線。出発駅は抽選するか今いる駅を選べます。"}</p>
         <div class="line-list">${lines.map(item => `<button class="line-card" data-action="select-line" data-line="${item.id}" style="--line-color:${item.color}"><span class="line-pill">${item.id === "Mb" ? "m" : item.id}</span><span><strong>${item.name.replace("（分岐線）", "（方南町支線）")}</strong><small>${item.stations[0].name} — ${item.stations.at(-1).name} · ${item.stations.length}駅</small></span><span class="line-chevron">→</span></button>`).join("")}</div>
         <div class="panel"><span class="mini-label">HOW TO PLAY</span>
@@ -518,7 +529,7 @@
     if (state === "START_LOTTERY" || state === "GOAL_LOTTERY") {
       const isStart = state === "START_LOTTERY";
       return {
-        body: `<div class="fade-in"><span class="eyebrow">STEP ${isStart ? "01" : "02"} / 02</span>
+        body: `<div class="fade-in">${setupProgress(state)}<span class="eyebrow">${isStart ? "START STATION" : "DESTINATION"}</span>
           <h2 class="screen-title">${isStart ? "出発駅を決めよう" : "ゴール駅を決めよう"}</h2>
           <p class="muted">${isStart ? lineName() + stations.length + "駅から抽選するか、今いる駅を選べます。" : "出発駅は " + label(game.startStationId) + "。旅の長さを選んで" + (crossLine() ? "別の路線の" : "") + "ゴールを抽選します。"}</p>
           <div class="reel-machine"><div class="reel-head"><span class="reel-led" aria-hidden="true"></span><span>${isStart ? "START STATION" : "DESTINATION"}</span><small>STATION SELECTOR</small></div>
@@ -584,13 +595,14 @@
     const home = view === "landing" || view === "game" && !game;
     const canHistory = game?.startStationId && game.visitHistory.length > 0;
     const setup = !home && view !== "map" && !game?.lineId;
+    const choice = view === "game" && ["MODE_SELECTION", "LINE_SELECTION"].includes(game?.gameState);
     const navIcons = {
       home:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-7h6v7"/></svg>',
       trip:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r=".8"/><circle cx="16" cy="8" r=".8"/><circle cx="12" cy="12" r=".8"/><circle cx="8" cy="16" r=".8"/><circle cx="16" cy="16" r=".8"/></svg>',
       map:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15m6-12v15"/></svg>',
       atlas:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12a2 2 0 0 1 2 2v16H7a3 3 0 0 1-3-3V4a1 1 0 0 1 1-1zM7 21a3 3 0 0 1 0-6h12"/><path d="m11 8 1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/></svg>'
     };
-    app.innerHTML = `<main class="shell ${home ? "home-shell" : view === "map" ? "map-shell" : "game-shell"}${setup ? " setup-shell" : ""}">
+    app.innerHTML = `<main class="shell ${home ? "home-shell" : view === "map" ? "map-shell" : "game-shell"}${setup ? " setup-shell" : ""}${choice ? " choice-shell" : ""}">
       <aside class="side side-left"><div class="brand"><span class="brand-mark">M</span>きまぐれメトロ旅</div>
         <div><span class="side-kicker">A SMALL TRIP, BY CHANCE</span><h1>次の駅は、<br><strong>サイコロ次第。</strong></h1>
           <p>今いる駅からでも、抽選からでも。ひと駅ずつ進むたび、街に新しい発見がある。</p></div>
@@ -644,6 +656,15 @@
     if (action === "start") { saveNew(); return; }
     if (action === "home") { view = game ? "landing" : "game"; render(); app.querySelector("#screen")?.scrollTo(0,0); return; }
     if (action === "resume" && game) { view = "game"; render(); return; }
+    if (action === "setup-back" && !busy && view === "game") {
+      const state = game?.gameState;
+      if (state === "MODE_SELECTION") { view = "landing"; render(); }
+      else if (state === "LINE_SELECTION") save({travelMode:null,gameState:"MODE_SELECTION"});
+      else if (state === "START_LOTTERY") save({lineId:null,gameState:"LINE_SELECTION"});
+      else if (state === "GOAL_LOTTERY") save({startStationId:null,currentStationId:null,gameState:"START_LOTTERY"});
+      app.querySelector("#screen")?.scrollTo(0,0);
+      return;
+    }
     if (action === "restart") {
       if (game && game.gameState !== "GOAL" && !confirm("進行中の旅を消して、新しい旅を始めますか？")) return;
       start(); return;

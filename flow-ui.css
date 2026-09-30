@@ -1,0 +1,67 @@
+/* The setup flow keeps its position and the way back visible. */
+.choice-shell .action-area{display:none}
+.choice-shell .app-body{padding-bottom:55px}
+.setup-progress{
+  display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:23px;
+  margin:0 0 42px;padding:14px 18px;
+  border:1px solid #af9b735c;border-radius:13px;
+  background:linear-gradient(115deg,#092922,#174036);color:#f6eee0;
+  box-shadow:0 12px 24px #10392a17;
+}
+.setup-back{
+  border:1px solid #f1d5a663;border-radius:7px;padding:10px 11px;
+  background:#ffffff0d;color:#f2ddba;font-size:.72rem;font-weight:700;white-space:nowrap;
+}
+.setup-back:hover{background:#ffffff20}
+.setup-progress ol{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;
+  list-style:none;margin:0;padding:0;
+}
+.setup-progress li{
+  min-width:0;padding:7px 0 0;border-top:2px solid #79948a8c;
+  color:#aabdb0;font-size:.69rem;font-weight:700;white-space:nowrap;
+}
+.setup-progress li span{
+  margin-right:6px;font:500 .61rem "DM Mono",monospace;color:#aabdb0;
+}
+.setup-progress li.done{border-color:#b9c7a5;color:#dce5d6}
+.setup-progress li.active{border-color:#f1c57d;color:#ffe3b1}
+.setup-progress li.active span{color:#f1c57d}
+.choice-shell .mode-list{margin-top:29px}
+.choice-shell .mode-card{min-height:290px}
+.mode-route{
+  position:relative;display:flex;justify-content:space-between;align-items:center;
+  width:100%;max-width:215px;height:24px;margin-top:12px;
+}
+.mode-route:before{
+  content:"";position:absolute;left:6px;right:6px;top:11px;height:2px;
+  background:#b98a4b;
+}
+.mode-route i{
+  z-index:1;width:12px;height:12px;border:2px solid #b98a4b;border-radius:50%;
+  background:#fffaf1;
+}
+.mode-route i:last-child{background:#b98a4b;box-shadow:0 0 0 4px #d4ab6929}
+.mode-card.network .mode-route:before{background:linear-gradient(90deg,#e2b557 0 33%,#ce735a 33% 66%,#55b6a1 66%)}
+.mode-card.network .mode-route i{border-color:#e2b557;background:#194237}
+.mode-card.network .mode-route i:nth-child(2){border-color:#ce735a}
+.mode-card.network .mode-route i:nth-child(3){border-color:#55b6a1}
+.mode-card.network .mode-route i:last-child{background:#55b6a1;border-color:#55b6a1;box-shadow:0 0 0 4px #55b6a126}
+.choice-shell .mode-card em{margin-top:auto}
+.game-shell .setup-progress+.eyebrow{display:block}
+@media(max-width:690px){
+  .choice-shell .app-body{padding-bottom:100px}
+  .setup-progress{gap:11px;margin:0 0 30px;padding:12px 13px;border-radius:11px}
+  .setup-back{padding:8px 7px;font-size:.63rem}
+  .setup-progress ol{gap:4px}
+  .setup-progress li{font-size:.59rem;letter-spacing:-.06em}
+  .setup-progress li span{display:block;margin:0 0 2px;font-size:.55rem}
+  .choice-shell .mode-card{min-height:0}
+  .choice-shell .mode-card .mode-icon{grid-row:1/6}
+  .choice-shell .mode-card .mode-route,.choice-shell .mode-card em{grid-column:2}
+  .choice-shell .mode-card .mode-route{margin:6px 0 0;max-width:180px}
+}
+@media(max-width:350px){
+  .setup-progress{grid-template-columns:1fr;gap:11px}
+  .setup-back{justify-self:start}
+}
