@@ -448,16 +448,18 @@
     if (!game?.lineId) return '<p class="route-note">出発路線を選ぶと、駅の並びがここに表示されます。</p>';
     if (crossLine() && game.routeStops) return game.routeStops.map((s,i) => {
       const transfer = i < game.routeStops.length-1 && s.lineId !== game.routeStops[i+1].lineId;
-      return `<div class="rail-station ${i === game.routeIndex ? "current" : ""} ${i === game.routeStops.length-1 ? "goal" : ""} ${i < game.routeIndex ? "past" : ""}" style="--station-color:${lineById(s.lineId).color}">
+      const pending = game.gameState === "TRAVELING" && i === game.pendingIndex;
+      return `<div class="rail-station ${i === game.routeIndex ? "current" : ""} ${i === game.routeStops.length-1 ? "goal" : ""} ${i < game.routeIndex ? "past" : ""} ${pending ? "pending" : ""}" style="--station-color:${lineById(s.lineId).color}">
         <span class="rail-dot"></span><span class="rail-code">${s.id}</span><span>${escapeHtml(s.name)}</span>${transfer ? '<span class="transfer-tag">乗換</span>' : ""}
-        ${i === game.routeIndex ? '<span class="rail-tag">NOW</span>' : i === game.routeStops.length-1 ? '<span class="rail-tag">GOAL</span>' : ""}</div>`;
+        ${i === game.routeIndex ? '<span class="rail-tag">NOW</span>' : pending ? '<span class="rail-tag">NEXT</span>' : i === game.routeStops.length-1 ? '<span class="rail-tag">GOAL</span>' : ""}</div>`;
     }).join("");
     return stations.map((s, i) => {
       const at = game?.currentStationId ? byId(game.currentStationId) : -1;
       const past = game?.goalStationId && (game.direction > 0 ? i < at : i > at);
-      return `<div class="rail-station ${s.id === game?.currentStationId ? "current" : ""} ${s.id === game?.goalStationId ? "goal" : ""} ${past ? "past" : ""}">
+      const pending = game.gameState === "TRAVELING" && s.id === game.pendingStationId;
+      return `<div class="rail-station ${s.id === game?.currentStationId ? "current" : ""} ${s.id === game?.goalStationId ? "goal" : ""} ${past ? "past" : ""} ${pending ? "pending" : ""}">
         <span class="rail-dot"></span><span class="rail-code">${s.id}</span><span>${s.name}</span>
-        ${s.id === game?.currentStationId ? '<span class="rail-tag">NOW</span>' : s.id === game?.goalStationId ? '<span class="rail-tag">GOAL</span>' : ""}</div>`;
+        ${s.id === game?.currentStationId ? '<span class="rail-tag">NOW</span>' : pending ? '<span class="rail-tag">NEXT</span>' : s.id === game?.goalStationId ? '<span class="rail-tag">GOAL</span>' : ""}</div>`;
     }).join("");
   }
   function homeScreen() {
@@ -559,14 +561,16 @@
     };
     if (state === "TRAVELING") return {
       body: `<div class="fade-in"><span class="eyebrow">NEXT STOP / ${game.pendingStationId}</span>
-        <h2 class="screen-title">次は、${escapeHtml(pendingName())}。</h2>
-        <p class="muted">サイコロは ${game.lastDice}。駅に着いたら到着を確定してください。</p>
-        ${crossLine() ? `<div class="trip-line-callout">到着路線 <b style="color:${lineById(routeStop(game.pendingIndex).lineId).color}">${escapeHtml(lineById(routeStop(game.pendingIndex).lineId).name)}</b> · ${game.pendingIndex-game.routeIndex}駅進む</div>` : ""}
-        <div class="panel-dark"><span class="display-kicker">ARRIVING AT</span><div class="display-station ${busy ? "reel-flash" : ""}">${escapeHtml(displayStation || pendingName())}</div>
-          <span class="display-code">CURRENT: ${escapeHtml(currentName())}</span><div class="display-underline"></div></div>
-        <div class="dice-stage ${busy ? "rolling" : ""}" style="margin:23px 0 35px"><span class="dice-glyph" style="width:90px;height:90px;font-size:5rem;border-radius:17px" aria-label="サイコロの出目 ${game.lastDice}">${faces[(diceDisplay || game.lastDice) - 1]}</span></div>
-        ${miniMap()}
-        <a class="secondary" style="display:block;text-align:center;text-decoration:none;margin-top:17px" target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pendingName() + "駅 東京メトロ")}">Google マップで駅を確認 ↗</a></div>`,
+        <h2 class="screen-title">サイコロは ${game.lastDice}。</h2>
+        <p class="muted">次の駅へ向かいましょう。着いたら到着を確定してください。</p>
+        <section class="next-stop-board" aria-label="次の駅" style="--next-line-color:${crossLine() ? lineById(routeStop(game.pendingIndex).lineId).color : line.color}">
+          <div class="next-stop-top"><span>${crossLine() ? escapeHtml(lineById(routeStop(game.pendingIndex).lineId).name) : lineName()}</span><span>${crossLine() ? game.pendingIndex-game.routeIndex : Math.abs(byId(game.pendingStationId)-byId(game.currentStationId))} 駅先</span></div>
+          <div class="next-stop-main"><span>次の駅 / NEXT STOP</span><strong class="${busy ? "reel-flash" : ""}">${escapeHtml(displayStation || pendingName())}</strong>
+            <span class="next-stop-die ${busy ? "rolling" : ""}" aria-label="サイコロの出目 ${game.lastDice}">${faces[(diceDisplay || game.lastDice) - 1]}</span></div>
+          <div class="next-stop-foot"><span>現在地　${escapeHtml(currentName())}</span><span>→</span><span>${escapeHtml(pendingName())}</span></div>
+        </section>
+        <a class="arrival-map-link" target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pendingName() + "駅 東京メトロ")}">Google マップで駅を確認 <span aria-hidden="true">↗</span></a>
+        ${miniMap()}</div>`,
       action: `<button class="primary" data-action="arrive" ${busy ? "disabled" : ""}>到着した　→</button>`
     };
     if (state === "ARRIVED") return {

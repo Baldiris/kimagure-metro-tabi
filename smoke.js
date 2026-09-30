@@ -93,6 +93,7 @@ for (const line of first.lines) {
   s.click('back'); assert.equal(s.game.gameState, 'READY_TO_ROLL');
   s.click('roll'); assert.equal(s.game.currentStationId, line.stations[0].id);
   assert.equal(s.game.pendingStationId, line.stations[3].id);
+  assert(s.html.includes('次の駅 / NEXT STOP') && s.html.includes('<span class="rail-tag">NEXT</span>'));
   const restored = session([], s.raw); assert.equal(restored.game.lineId, line.id);
   assert(restored.html.includes('data-action="resume"'));
   restored.click('resume'); assert(restored.html.includes('data-action="arrive"'));
@@ -147,6 +148,7 @@ for (const line of first.lines) {
     s.click('roll');
     assert.equal(s.game.routeIndex, before);
     assert.equal(s.game.pendingIndex, Math.min(before + s.game.lastDice, s.game.routeStops.length - 1));
+    assert(s.html.includes('<span class="rail-tag">NEXT</span>'));
     const restored = session([], s.raw);
     assert.equal(restored.game.gameState, 'TRAVELING');
     restored.click('resume'); assert(restored.html.includes('data-action="arrive"'));

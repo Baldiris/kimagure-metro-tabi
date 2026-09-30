@@ -49,6 +49,49 @@
 .mode-card.network .mode-route i:last-child{background:#55b6a1;border-color:#55b6a1;box-shadow:0 0 0 4px #55b6a126}
 .choice-shell .mode-card em{margin-top:auto}
 .game-shell .setup-progress+.eyebrow{display:block}
+.next-stop-board{
+  position:relative;overflow:hidden;margin:25px 0 13px;padding:20px 26px 22px;
+  border:1px solid #b99b68;border-radius:15px;
+  background:radial-gradient(circle at 100% 0,#3d655483,transparent 42%),linear-gradient(135deg,#0b312c,#071e1d);
+  color:#fff7e7;box-shadow:0 20px 33px #10382b30;
+}
+.next-stop-board:before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--next-line-color)}
+.next-stop-top,.next-stop-foot{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.next-stop-top{color:#f3d098;font:600 .73rem "Noto Sans JP",sans-serif}
+.next-stop-top span:last-child{color:#cedfd2;font:.72rem "DM Mono",monospace}
+.next-stop-main{position:relative;min-height:182px;padding:35px 100px 24px 0}
+.next-stop-main>span:first-child{display:block;color:#b4c7bb;font:500 .66rem "DM Mono",monospace;letter-spacing:.14em}
+.next-stop-main strong{
+  display:block;margin-top:9px;font:600 clamp(2.4rem,5vw,3.35rem)/1.3 var(--premium-serif);
+  letter-spacing:-.07em;overflow-wrap:anywhere;
+}
+.next-stop-die{
+  position:absolute;right:3px;top:50%;transform:translateY(-50%) rotate(-8deg);
+  width:77px;height:77px;display:grid;place-items:center;
+  border:1px solid #dcc58f;border-radius:14px;
+  color:#174036;background:linear-gradient(145deg,#fffcf3,#e8d6b3);
+  box-shadow:0 7px 0 #a49a81,0 16px 22px #031b176b;
+  font-size:4.4rem;line-height:1;
+}
+.next-stop-die.rolling{animation:next-die-spin .22s infinite linear}
+@keyframes next-die-spin{
+  0%,100%{transform:translateY(-50%) rotate(-8deg)}
+  50%{transform:translateY(-50%) rotate(13deg)}
+}
+.next-stop-foot{border-top:1px solid #e6d6b447;padding-top:14px;color:#dce7db;font-size:.73rem}
+.next-stop-foot span:nth-child(2){color:#e8bc77;font-size:1.1rem}
+.arrival-map-link{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  margin:0 0 26px;padding:14px 18px;border:1px solid #d4c4a9;border-radius:10px;
+  background:#fffcf6;color:#2d5041;text-decoration:none;font-size:.78rem;font-weight:700;
+}
+.arrival-map-link:hover{border-color:#aa824a;background:#f6eee0}
+.arrival-map-link span{color:#ab7b3d;font-size:1.1rem}
+.game-shell .rail-station.pending{color:#173e32;font-weight:700}
+.game-shell .rail-station.pending .rail-dot{
+  border-color:#d5a251;background:#f5cf88;box-shadow:0 0 0 5px #dfad5d33;
+}
+.game-shell .rail-station.pending .rail-tag{color:#9c672c;font-weight:800}
 @media(max-width:690px){
   .choice-shell .app-body{padding-bottom:100px}
   .setup-progress{gap:11px;margin:0 0 30px;padding:12px 13px;border-radius:11px}
@@ -60,8 +103,15 @@
   .choice-shell .mode-card .mode-icon{grid-row:1/6}
   .choice-shell .mode-card .mode-route,.choice-shell .mode-card em{grid-column:2}
   .choice-shell .mode-card .mode-route{margin:6px 0 0;max-width:180px}
+  .next-stop-board{padding:18px 18px 20px;margin-top:20px}
+  .next-stop-main{min-height:160px;padding:28px 81px 22px 0}
+  .next-stop-main strong{font-size:clamp(1.9rem,7.5vw,2.6rem)}
+  .next-stop-die{width:63px;height:63px;font-size:3.5rem}
+  .next-stop-foot{font-size:.68rem}
+  .arrival-map-link{margin-bottom:19px}
 }
 @media(max-width:350px){
   .setup-progress{grid-template-columns:1fr;gap:11px}
   .setup-back{justify-self:start}
 }
+@media(prefers-reduced-motion:reduce){.next-stop-die.rolling{animation:none}}
