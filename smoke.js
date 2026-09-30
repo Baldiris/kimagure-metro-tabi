@@ -155,6 +155,7 @@ for (const line of first.lines) {
     s.click('arrive');
     assert.equal(s.game.routeIndex, Math.min(before + s.game.lastDice, s.game.routeStops.length - 1));
     const visit = s.game.visitHistory.at(-1);
+    if (s.game.gameState === 'ARRIVED') assert(s.html.includes('arrival-discovery'));
     assert.equal(visit.stationName, s.game.routeStops[s.game.routeIndex].name);
     assert.equal(visit.quests.length, 2);
     if (visit.lineId !== line.id) movedAcrossLines = true;

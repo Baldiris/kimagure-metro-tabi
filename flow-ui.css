@@ -92,6 +92,21 @@
   border-color:#d5a251;background:#f5cf88;box-shadow:0 0 0 5px #dfad5d33;
 }
 .game-shell .rail-station.pending .rail-tag{color:#9c672c;font-weight:800}
+.arrival-ticket{
+  overflow:hidden;border-color:#d1c0a0;padding:24px 27px 30px;
+  background:radial-gradient(circle at 100% 0,#f5e3bd6b,transparent 55%),#fffdf7;
+}
+.arrival-ticket:before{content:"";position:absolute;inset:0 auto 0 0;width:6px;background:var(--ticket-line-color)}
+.arrival-ticket strong{margin:16px 0 24px;font-size:clamp(2.15rem,4vw,2.8rem)}
+.arrival-ticket-foot{align-items:center;flex-wrap:wrap;gap:10px}
+.arrival-ticket-foot>span:first-child{font-family:"Noto Sans JP",sans-serif;font-size:.75rem}
+.arrival-ticket-foot>span:first-child b{color:#204c3b;font-size:.95rem}
+.arrival-discovery{
+  display:inline-flex;align-items:center;gap:8px;margin-left:auto;padding:7px 11px;
+  border:1px solid #c9ab79;border-radius:99px;background:#f5eedf;
+  color:#76582e;font:700 .68rem "Noto Sans JP",sans-serif;white-space:nowrap;
+}
+.arrival-discovery b{color:#24473c;font:500 .73rem "DM Mono",monospace}
 @media(max-width:690px){
   .choice-shell .app-body{padding-bottom:100px}
   .setup-progress{gap:11px;margin:0 0 30px;padding:12px 13px;border-radius:11px}
@@ -109,6 +124,9 @@
   .next-stop-die{width:63px;height:63px;font-size:3.5rem}
   .next-stop-foot{font-size:.68rem}
   .arrival-map-link{margin-bottom:19px}
+  .arrival-ticket{padding:21px 19px 30px}
+  .arrival-ticket strong{font-size:2rem;margin:12px 0 19px}
+  .arrival-discovery{margin-left:0}
 }
 @media(max-width:350px){
   .setup-progress{grid-template-columns:1fr;gap:11px}

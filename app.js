@@ -574,9 +574,9 @@
       action: `<button class="primary" data-action="arrive" ${busy ? "disabled" : ""}>到着した　→</button>`
     };
     if (state === "ARRIVED") return {
-      body: `<div class="fade-in"><span class="eyebrow">ARRIVED / ${game.currentStationId}</span><h2 class="screen-title">着きました。</h2>
-        <div class="arrival-ticket"><div class="ticket-row"><span>${crossLine() ? escapeHtml(lineById(routeStop(game.routeIndex).lineId).name) : lineName()}</span><span>STOP ${game.currentStationId}</span></div>
-          <strong>${escapeHtml(currentName())}</strong><div class="ticket-row"><span>GOAL まで</span><span>${remaining()} 駅</span></div></div>
+      body: `<div class="fade-in"><span class="eyebrow">ARRIVED / ${game.currentStationId}</span><h2 class="screen-title">ひと駅、発見。</h2>
+        <div class="arrival-ticket" style="--ticket-line-color:${crossLine() ? lineById(routeStop(game.routeIndex).lineId).color : line.color}"><div class="ticket-row"><span>${crossLine() ? escapeHtml(lineById(routeStop(game.routeIndex).lineId).name) : lineName()}</span><span>STOP ${game.currentStationId}</span></div>
+          <strong>${escapeHtml(currentName())}</strong><div class="ticket-row arrival-ticket-foot"><span>ゴールまで <b>${remaining()} 駅</b></span><span class="arrival-discovery">${collection.visits[currentName()]?.count === 1 ? "新しい駅を発見" : "もう一度この駅へ"} <b>${Object.keys(collection.visits).filter(name => metroMap.stations.has(name)).length} / ${metroMap.stations.size}</b></span></div></div>
         ${questList()}${miniMap()}<p class="route-note">クエストは任意です。ひとつも達成しなくても次へ進めます。</p></div>`,
       action: '<button class="primary" data-action="next">次のサイコロへ　→</button>'
     };
